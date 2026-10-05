@@ -2,7 +2,7 @@
 
 ## TLDR
 
-The stock `second-brain.mdc` is **generic**. Copy a fragment below into your own agent config:
+The stock `brainium.mdc` is **generic**. Copy a fragment below into your own agent config:
 
 - Cursor: `.cursor/rules/<project>-extensions.mdc`
 - Claude: append to `CLAUDE.md` or a dedicated `.claude/skills/<project>/SKILL.md`

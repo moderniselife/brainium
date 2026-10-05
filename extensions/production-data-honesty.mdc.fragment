@@ -1,11 +1,11 @@
 ---
-description: Second brain extension — production vs demo/seed honesty (merge into project rules).
+description: Brainium extension — production vs demo/seed honesty (merge into project rules).
 alwaysApply: true
 ---
 
-# Second brain extension: production data honesty
+# Brainium extension: production data honesty
 
-Add these rows to the incident table in `second-brain.mdc` (or reference this file from your project README):
+Add these rows to the incident table in `brainium.mdc` (or reference this file from your project README):
 
 | Trigger | Required capture |
 |---------|------------------|

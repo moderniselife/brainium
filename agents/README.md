@@ -2,7 +2,7 @@
 
 ## TLDR
 
-Shared memory lives in **`docs/second-brain/`** + **`core/POLICY.md`**. Each subfolder wires a different tool.
+Shared memory lives in **`docs/brainium/`** + **`core/POLICY.md`**. Each subfolder wires a different tool.
 
 | Folder | Tool | Installs to |
 |--------|------|-------------|

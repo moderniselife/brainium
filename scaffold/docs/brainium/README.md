@@ -1,4 +1,4 @@
-# Second brain
+# Brainium
 
 ## TLDR
 
@@ -7,7 +7,7 @@ Mandatory project memory outside chat. **Every substantive conversation** → `s
 ## Folder map
 
 ```
-docs/second-brain/
+docs/brainium/
 ├── sessions/       # Daily conversation roll-ups (mandatory)
 ├── learnings/      # What we now know
 ├── failures/       # What broke, root cause, prevention
@@ -33,8 +33,8 @@ docs/second-brain/
 
 | Tool | Hook |
 |------|------|
-| Cursor | `.cursor/rules/second-brain.mdc`, `.cursor/skills/second-brain/` |
-| Claude Code | `CLAUDE.md`, `.claude/skills/second-brain/` |
+| Cursor | `.cursor/rules/brainium.mdc`, `.cursor/skills/brainium/` |
+| Claude Code | `CLAUDE.md`, `.claude/skills/brainium/` |
 | Other | `AGENTS.md` at repo root |
 
 ## Quick index

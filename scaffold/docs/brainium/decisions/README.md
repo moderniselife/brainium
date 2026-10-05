@@ -1,4 +1,4 @@
-# Decisions (second brain index)
+# Decisions (Brainium index)
 
 ## TLDR
 

@@ -1,13 +1,13 @@
-# Second brain policy (all agents)
+# Brainium policy (all agents)
 
 ## TLDR
 
-Git-backed memory under `docs/second-brain/`. The user does **not** ask you to log — you capture before saying done. Incidents need `failures/` (+ `learnings/`); session-only is incomplete. Index every new failure/learning slug in that folder’s `README.md`.
+Git-backed memory under `docs/brainium/`. The user does **not** ask you to log — you capture before saying done. Incidents need `failures/` (+ `learnings/`); session-only is incomplete. Index every new failure/learning slug in that folder’s `README.md`.
 
 ## Folder tree
 
 ```
-docs/second-brain/
+docs/brainium/
   sessions/      # mandatory daily roll-up
   learnings/     # durable knowledge
   failures/      # mistakes + prevention
@@ -44,18 +44,18 @@ docs/second-brain/
 
 | Must repeat | Action |
 |-------------|--------|
-| Agent guard | Tool-specific rules + `docs/second-brain/rules/` note |
-| Workflow | Tool-specific skill + `docs/second-brain/skills/` note |
+| Agent guard | Tool-specific rules + `docs/brainium/rules/` note |
+| Workflow | Tool-specific skill + `docs/brainium/skills/` note |
 | Locked decision | ADR in `docs/decisions/` (or your register) |
 
 ## Before risky work
 
-Search `docs/second-brain/failures/` and `learnings/` plus project how-tos.
+Search `docs/brainium/failures/` and `learnings/` plus project how-tos.
 
 ## Tooling map
 
 | Environment | Hook |
 |-------------|------|
-| Cursor | `.cursor/rules/second-brain.mdc` + `.cursor/skills/second-brain/` |
-| Claude Code | `.claude/skills/second-brain/` + `CLAUDE.md` section |
+| Cursor | `.cursor/rules/brainium.mdc` + `.cursor/skills/brainium/` |
+| Claude Code | `.claude/skills/brainium/` + `CLAUDE.md` section |
 | Generic / other | `AGENTS.md` + [agents/generic/prompts/closeout-system.md](../agents/generic/prompts/closeout-system.md) |

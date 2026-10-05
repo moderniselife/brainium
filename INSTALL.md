@@ -1,4 +1,4 @@
-# Install Agent Second Brain
+# Install Brainium
 
 ## TLDR
 
@@ -15,33 +15,33 @@ Default with no platform flags: **`--all`** (docs + Cursor + Claude + generic).
 
 | Platform | After install | Verify |
 |----------|---------------|--------|
-| **Cursor** | Rule `alwaysApply: true` on `second-brain.mdc` | Agent logs session without being asked |
-| **Claude Code** | `CLAUDE.md` + `.claude/skills/second-brain/` | Same; see [agents/claude/README.md](./agents/claude/README.md) |
-| **Codex CLI** | Copy skill to `~/.codex/skills/second-brain/` | Optional; see Claude README |
-| **Generic** | Root `AGENTS.md` points at `docs/second-brain/POLICY.md` | Paste [closeout prompt](./agents/generic/prompts/closeout-system.md) if needed |
+| **Cursor** | Rule `alwaysApply: true` on `brainium.mdc` | Agent logs session without being asked |
+| **Claude Code** | `CLAUDE.md` + `.claude/skills/brainium/` | Same; see [agents/claude/README.md](./agents/claude/README.md) |
+| **Codex CLI** | Copy skill to `~/.codex/skills/brainium/` | Optional; see Claude README |
+| **Generic** | Root `AGENTS.md` points at `docs/brainium/POLICY.md` | Paste [closeout prompt](./agents/generic/prompts/closeout-system.md) if needed |
 
 ## Claude Code (details)
 
-1. **Project skill** — `.claude/skills/second-brain/SKILL.md` (installed by `--claude` or `--all`).
+1. **Project skill** — `.claude/skills/brainium/SKILL.md` (installed by `--claude` or `--all`).
 2. **CLAUDE.md** — install script appends `agents/claude/CLAUDE.md.fragment` if missing.
 3. **User-global skill** (optional):
 
    ```bash
-   mkdir -p ~/.claude/skills/second-brain
-   cp agents/claude/skills/second-brain/SKILL.md ~/.claude/skills/second-brain/
+   mkdir -p ~/.claude/skills/brainium
+   cp agents/claude/skills/brainium/SKILL.md ~/.claude/skills/brainium/
    ```
 
 4. **Hooks** — optional; see [agents/claude/settings-notes.md](./agents/claude/settings-notes.md).
 
 ## Cursor (details)
 
-1. `.cursor/rules/second-brain.mdc` — always apply.
-2. `.cursor/skills/second-brain/SKILL.md` — end-of-turn checklist.
+1. `.cursor/rules/brainium.mdc` — always apply.
+2. `.cursor/skills/brainium/SKILL.md` — end-of-turn checklist.
 
 ## Generic (details)
 
-1. `AGENTS.md` from template — add your stack commands below the second-brain section.
-2. `docs/second-brain/POLICY.md` — copy of `core/POLICY.md`.
+1. `AGENTS.md` from template — add your stack commands below the Brainium section.
+2. `docs/brainium/POLICY.md` — copy of `core/POLICY.md`.
 
 ## Upgrading
 

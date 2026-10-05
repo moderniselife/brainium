@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install Agent Second Brain into a target repository.
+# Install Brainium into a target repository.
 set -euo pipefail
 
 FORCE=0
@@ -17,7 +17,7 @@ Options:
   --all       Install docs + Cursor + Claude + generic (default if no platform flags)
   --cursor    .cursor/rules + .cursor/skills
   --claude    .claude/skills + merge CLAUDE.md fragment
-  --generic   AGENTS.md + docs/second-brain/POLICY.md
+  --generic   AGENTS.md + docs/brainium/POLICY.md
   --force     Overwrite existing agent hooks and template READMEs
   -h, --help  This help
 
@@ -54,7 +54,7 @@ fi
 
 TARGET="$(cd "$TARGET" && pwd)"
 PKG_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-SCAFFOLD="$PKG_ROOT/scaffold/docs/second-brain"
+SCAFFOLD="$PKG_ROOT/scaffold/docs/brainium"
 POLICY="$PKG_ROOT/core/POLICY.md"
 
 copy_tree() {
@@ -91,12 +91,12 @@ cp_file() {
 merge_claude_fragment() {
   local dest="$TARGET/CLAUDE.md"
   local fragment="$PKG_ROOT/agents/claude/CLAUDE.md.fragment"
-  local marker="## Second brain (mandatory)"
+  local marker="## Brainium (mandatory)"
   if [[ -f "$dest" ]] && grep -q "$marker" "$dest" 2>/dev/null; then
     if [[ "$FORCE" -eq 1 ]]; then
-      echo "  (CLAUDE.md already has second-brain section — merge manually or edit)"
+      echo "  (CLAUDE.md already has Brainium section — merge manually or edit)"
     else
-      echo "  (skip CLAUDE.md — already contains second-brain section)"
+      echo "  (skip CLAUDE.md — already contains Brainium section)"
     fi
     return
   fi
@@ -106,25 +106,25 @@ merge_claude_fragment() {
   else
     printf '\n\n' >> "$dest"
     cat "$fragment" >> "$dest"
-    echo "  → Appended second-brain section to CLAUDE.md"
+    echo "  → Appended Brainium section to CLAUDE.md"
   fi
 }
 
-echo "→ Scaffolding docs/second-brain in $TARGET"
-copy_tree "$SCAFFOLD" "$TARGET/docs/second-brain"
-cp_file "$POLICY" "$TARGET/docs/second-brain/POLICY.md"
+echo "→ Scaffolding docs/brainium in $TARGET"
+copy_tree "$SCAFFOLD" "$TARGET/docs/brainium"
+cp_file "$POLICY" "$TARGET/docs/brainium/POLICY.md"
 
 if [[ "$INSTALL_CURSOR" -eq 1 ]]; then
   echo "→ Cursor: rule + skill"
-  mkdir -p "$TARGET/.cursor/rules" "$TARGET/.cursor/skills/second-brain"
-  cp_file "$PKG_ROOT/agents/cursor/rules/second-brain.mdc" "$TARGET/.cursor/rules/second-brain.mdc"
-  cp_file "$PKG_ROOT/agents/cursor/skills/second-brain/SKILL.md" "$TARGET/.cursor/skills/second-brain/SKILL.md"
+  mkdir -p "$TARGET/.cursor/rules" "$TARGET/.cursor/skills/brainium"
+  cp_file "$PKG_ROOT/agents/cursor/rules/brainium.mdc" "$TARGET/.cursor/rules/brainium.mdc"
+  cp_file "$PKG_ROOT/agents/cursor/skills/brainium/SKILL.md" "$TARGET/.cursor/skills/brainium/SKILL.md"
 fi
 
 if [[ "$INSTALL_CLAUDE" -eq 1 ]]; then
   echo "→ Claude Code: project skill + CLAUDE.md"
-  mkdir -p "$TARGET/.claude/skills/second-brain"
-  cp_file "$PKG_ROOT/agents/claude/skills/second-brain/SKILL.md" "$TARGET/.claude/skills/second-brain/SKILL.md"
+  mkdir -p "$TARGET/.claude/skills/brainium"
+  cp_file "$PKG_ROOT/agents/claude/skills/brainium/SKILL.md" "$TARGET/.claude/skills/brainium/SKILL.md"
   merge_claude_fragment
 fi
 
@@ -135,9 +135,9 @@ fi
 
 echo ""
 echo "Done. Suggested git add:"
-echo "  docs/second-brain/"
-[[ "$INSTALL_CURSOR" -eq 1 ]] && echo "  .cursor/rules/second-brain.mdc .cursor/skills/second-brain/"
-[[ "$INSTALL_CLAUDE" -eq 1 ]] && echo "  .claude/skills/second-brain/ CLAUDE.md"
+echo "  docs/brainium/"
+[[ "$INSTALL_CURSOR" -eq 1 ]] && echo "  .cursor/rules/brainium.mdc .cursor/skills/brainium/"
+[[ "$INSTALL_CLAUDE" -eq 1 ]] && echo "  .claude/skills/brainium/ CLAUDE.md"
 [[ "$INSTALL_GENERIC" -eq 1 ]] && echo "  AGENTS.md"
 echo ""
 echo "Docs: agents/cursor/README.md agents/claude/README.md agents/generic/README.md"

@@ -1,0 +1,37 @@
+---
+description: Mandatory Brainium — summarise conversations into docs/brainium; route detail to typed folders; complete incident capture.
+alwaysApply: true
+---
+
+# Brainium — mandatory, no reminders needed
+
+Canonical policy: `core/POLICY.md` in the brainium package (or `docs/brainium/README.md` in your repo).
+
+The user does **not** need to ask you to log work. **You** capture every substantive conversation into git before you treat the task as finished.
+
+## Folder tree
+
+See `docs/brainium/README.md`. Each folder has `README.md` + `_template.md`.
+
+## Non-negotiable close-out
+
+1. **Session** — `docs/brainium/sessions/YYYY-MM-DD.md`; link every `failures/` and `learnings/` slug.
+2. **Route** — typed folders under `docs/brainium/`.
+3. **Index tables** — row in `failures/README.md` and/or `learnings/README.md` per new slug.
+4. **Commit** (push if project rules say so).
+5. **Tell the user once** which paths changed.
+
+## Incidents
+
+Follow the incident table in `core/POLICY.md`. Add project-specific rows via another `.cursor/rules/*.mdc` or `extensions/`.
+
+## Promotion (Cursor)
+
+| Repeat | Action |
+|--------|--------|
+| Agent guard | `.cursor/rules/*.mdc` + `docs/brainium/rules/` |
+| Workflow | `.cursor/skills/*/SKILL.md` + `docs/brainium/skills/` |
+
+## Skill
+
+`.cursor/skills/brainium/SKILL.md`

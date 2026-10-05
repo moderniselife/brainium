@@ -10,4 +10,4 @@
 
 **Open threads** — blockers, next steps.
 
-**Artifacts** — commits, PRs, tickets, other second-brain paths.
+**Artifacts** — commits, PRs, tickets, other Brainium paths.

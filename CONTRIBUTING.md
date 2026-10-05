@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve Cursor Second Brain.
+Thanks for helping improve Brainium.
 
 ## Scope
 
