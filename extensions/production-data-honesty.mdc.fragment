@@ -1,0 +1,15 @@
+---
+description: Second brain extension — production vs demo/seed honesty (merge into project rules).
+alwaysApply: true
+---
+
+# Second brain extension: production data honesty
+
+Add these rows to the incident table in `second-brain.mdc` (or reference this file from your project README):
+
+| Trigger | Required capture |
+|---------|------------------|
+| Bootstrap `seed*IfEmpty` inserts **user-visible** marketing or demo listings | **`learnings/`** (infra vs fictional published) + update project data-audit doc |
+| API “wired” but UI still shows placeholder seed rows | **`failures/`** (honesty gap) + migration or remove seed from bootstrap |
+
+Before shipping list/catalog features: grep for `DEMO_`, `seed*IfEmpty`, and mock merges in UI code.
