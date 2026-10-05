@@ -10,9 +10,14 @@ description: >-
 
 Read `core/POLICY.md` for the full incident bar. **Capture is automatic** — the user should not say “log this.”
 
+## Session calendar day (check first)
+
+- [ ] **Today’s `YYYY-MM-DD`** → correct `sessions/` file (calendar day). After midnight = new file; `00:xx` never on yesterday.
+- [ ] New day? → create file + `sessions/README.md` row.
+
 ## End-of-turn checklist
 
-- [ ] Append **session** → `docs/brainium/sessions/YYYY-MM-DD.md`
+- [ ] Append **session** → `docs/brainium/sessions/YYYY-MM-DD.md` (**today only**)
 - [ ] **Incidents?** → `failures/` (+ `learnings/`). Session alone = incomplete.
 - [ ] **Route** detail: learnings, failures, memories, questions, improvements, decisions
 - [ ] **Promotion:** new Cursor rule → `docs/brainium/rules/` + `.cursor/rules/`; skill → `docs/brainium/skills/` + `.cursor/skills/`

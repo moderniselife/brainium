@@ -13,9 +13,15 @@ The user does **not** need to ask you to log work. **You** capture every substan
 
 See `docs/brainium/README.md`. Each folder has `README.md` + `_template.md`.
 
+## Session file = calendar day (strict)
+
+- **`docs/brainium/sessions/YYYY-MM-DD.md`** = **calendar date** (local day unless project docs say otherwise), not “same chat until done.”
+- After midnight → **today’s** file. `00:xx` sections never go on yesterday’s log.
+- Confirm date before append; create file + `sessions/README.md` row for new days. Move misfiled sections to the correct date.
+
 ## Non-negotiable close-out
 
-1. **Session** — `docs/brainium/sessions/YYYY-MM-DD.md`; link every `failures/` and `learnings/` slug.
+1. **Session** — **`docs/brainium/sessions/YYYY-MM-DD.md` for today**; link every `failures/` and `learnings/` slug.
 2. **Route** — typed folders under `docs/brainium/`.
 3. **Index tables** — row in `failures/README.md` and/or `learnings/README.md` per new slug.
 4. **Commit** (push if project rules say so).

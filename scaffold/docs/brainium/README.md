@@ -21,7 +21,7 @@ docs/brainium/
 
 ## Agent workflow
 
-1. End of substantive turn → append `sessions/YYYY-MM-DD.md` ([template](./sessions/_template.md)).
+1. End of substantive turn → append **`sessions/YYYY-MM-DD.md` for today’s calendar date** ([template](./sessions/_template.md)). After midnight, use the new day’s file (`00:xx` is not yesterday).
 2. Route detail to the right folder (same commit when possible).
 3. Update `failures/README.md` / `learnings/README.md` for **each** new slug.
 4. **Incidents** → `failures/` + `learnings/` — not session-only.

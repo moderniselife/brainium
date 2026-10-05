@@ -12,9 +12,14 @@ Canonical policy: `core/POLICY.md` in this package, or `docs/brainium/README.md`
 
 The user should not say “log this.” **Capture is automatic.**
 
+## Session calendar day (check first)
+
+- [ ] **Today’s calendar date** → `docs/brainium/sessions/YYYY-MM-DD.md`. After midnight, use the new day’s file (`00:xx` is not “still yesterday”).
+- [ ] New day? → create file + `sessions/README.md` index row.
+
 ## End-of-turn checklist
 
-- [ ] Append **session** → `docs/brainium/sessions/YYYY-MM-DD.md` (use `sessions/_template.md`)
+- [ ] Append **session** → `docs/brainium/sessions/YYYY-MM-DD.md` for **today** (use `sessions/_template.md`)
 - [ ] **Incidents?** (deploy fail, trust break, “done” but broken) → **`failures/`** + **`learnings/`** when reusable. Session-only = incomplete.
 - [ ] **Route** other detail:
   - new knowledge → `learnings/`

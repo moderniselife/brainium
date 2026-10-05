@@ -19,9 +19,16 @@ docs/brainium/
   skills/        # why workflow skills exist
 ```
 
+## Session file = calendar day (strict)
+
+- **`sessions/YYYY-MM-DD.md`** is keyed by **calendar date** (user/team local day unless the project defines a timezone). It is **not** one file per conversation thread.
+- **`### HH:MM` headings** are clock time on **that** date. After midnight, append **today’s** file — e.g. `00:02` belongs on the **new** day, not yesterday’s, even if the chat never stopped.
+- **Before every append:** confirm today’s `YYYY-MM-DD`; create the file and `sessions/README.md` index row if missing.
+- **Wrong file?** Move sections to the correct date in the same fix; do not leave split logs.
+
 ## Close-out (substantive work)
 
-1. Append `sessions/YYYY-MM-DD.md` — link all `failures/` and `learnings/` touched.
+1. Append **`sessions/YYYY-MM-DD.md` for today’s calendar date** — link all `failures/` and `learnings/` touched.
 2. Route detail to typed folders.
 3. Update `failures/README.md` / `learnings/README.md` index tables.
 4. Commit (push per team rules).

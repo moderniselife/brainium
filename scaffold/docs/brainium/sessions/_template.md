@@ -1,3 +1,5 @@
+<!-- Filename = calendar day (YYYY-MM-DD). After midnight, new file; 00:xx belongs on the new date. -->
+
 ### HH:MM — One-line topic
 
 **What we did** — bullets.
