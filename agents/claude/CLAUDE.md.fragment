@@ -1,0 +1,14 @@
+## Second brain (mandatory)
+
+This project uses **git-backed agent memory** under `docs/second-brain/`. The user should **not** have to ask you to log work.
+
+**Before every substantive "done" reply:**
+
+1. Read and follow `.claude/skills/second-brain/SKILL.md` (project skill).
+2. Apply the incident and index rules in `core/POLICY.md` if present in the repo, else `docs/second-brain/README.md`.
+3. Append today's session file, route failures/learnings, update `failures/README.md` and `learnings/README.md` for new slugs, commit when the team expects it.
+4. Tell the user once which paths you updated (`sessions/…`, `failures/…`, `learnings/…`).
+
+**Substantive** = code, docs, debugging, deploy, product direction, or non-trivial explanation. Pure acknowledgements: one line in today's session only.
+
+When promoting repeat guardrails: document in `docs/second-brain/rules/` or `skills/` and add the hook in `CLAUDE.md`, `.cursor/rules`, or another agent config as appropriate.

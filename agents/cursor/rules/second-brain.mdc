@@ -1,0 +1,37 @@
+---
+description: Mandatory second brain — summarise conversations into docs/second-brain; route detail to typed folders; complete incident capture.
+alwaysApply: true
+---
+
+# Second brain — mandatory, no reminders needed
+
+Canonical policy: `core/POLICY.md` in the second-brain package (or `docs/second-brain/README.md` in your repo).
+
+The user does **not** need to ask you to log work. **You** capture every substantive conversation into git before you treat the task as finished.
+
+## Folder tree
+
+See `docs/second-brain/README.md`. Each folder has `README.md` + `_template.md`.
+
+## Non-negotiable close-out
+
+1. **Session** — `docs/second-brain/sessions/YYYY-MM-DD.md`; link every `failures/` and `learnings/` slug.
+2. **Route** — typed folders under `docs/second-brain/`.
+3. **Index tables** — row in `failures/README.md` and/or `learnings/README.md` per new slug.
+4. **Commit** (push if project rules say so).
+5. **Tell the user once** which paths changed.
+
+## Incidents
+
+Follow the incident table in `core/POLICY.md`. Add project-specific rows via another `.cursor/rules/*.mdc` or `extensions/`.
+
+## Promotion (Cursor)
+
+| Repeat | Action |
+|--------|--------|
+| Agent guard | `.cursor/rules/*.mdc` + `docs/second-brain/rules/` |
+| Workflow | `.cursor/skills/*/SKILL.md` + `docs/second-brain/skills/` |
+
+## Skill
+
+`.cursor/skills/second-brain/SKILL.md`

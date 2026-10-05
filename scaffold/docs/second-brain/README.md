@@ -27,7 +27,15 @@ docs/second-brain/
 4. **Incidents** → `failures/` + `learnings/` — not session-only.
 5. Commit (and push per team rules); tell the user which paths changed.
 
-See `.cursor/rules/second-brain.mdc` and `.cursor/skills/second-brain/SKILL.md`.
+**Policy:** [POLICY.md](./POLICY.md) (same as package `core/POLICY.md`).
+
+**Agent hooks (use what your repo has):**
+
+| Tool | Hook |
+|------|------|
+| Cursor | `.cursor/rules/second-brain.mdc`, `.cursor/skills/second-brain/` |
+| Claude Code | `CLAUDE.md`, `.claude/skills/second-brain/` |
+| Other | `AGENTS.md` at repo root |
 
 ## Quick index
 

@@ -1,0 +1,23 @@
+# Agent instructions
+
+## Second brain (mandatory)
+
+This repository keeps **durable memory in git** under `docs/second-brain/`. The human should **not** need to ask you to log work.
+
+**Policy:** Read `docs/second-brain/POLICY.md` (or `docs/second-brain/README.md`).
+
+**Before you say a task is done** (substantive work only):
+
+1. Append `docs/second-brain/sessions/YYYY-MM-DD.md` using `sessions/_template.md`.
+2. File incidents in `failures/` and reusable fixes in `learnings/` — update each folder's `README.md` index table for new slugs.
+3. Route other detail: `memories/`, `questions/`, `improvements/`, `decisions/`.
+4. Commit documentation changes when the project expects git hygiene.
+5. Tell the user once which paths you updated.
+
+**Incidents** include: failed builds/deploys, user trust breaks, docs claiming "done" while production is wrong, and the user correcting missing documentation.
+
+**Promotion:** repeat guardrails → document in `docs/second-brain/rules/` or `skills/` and add the appropriate tool config (`.cursor/rules`, `.claude/skills`, or this file).
+
+## Project-specific rules
+
+Add your stack, test commands, and conventions below.

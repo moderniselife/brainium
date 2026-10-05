@@ -2,7 +2,11 @@
 
 ## TLDR
 
-The stock `second-brain.mdc` is **generic**. Copy a fragment below into your own `.cursor/rules/<project>-second-brain.mdc` (also `alwaysApply: true`) or merge rows into your incident table.
+The stock `second-brain.mdc` is **generic**. Copy a fragment below into your own agent config:
+
+- Cursor: `.cursor/rules/<project>-extensions.mdc`
+- Claude: append to `CLAUDE.md` or a dedicated `.claude/skills/<project>/SKILL.md`
+- Generic: append to `AGENTS.md`
 
 ## Example: production data honesty
 

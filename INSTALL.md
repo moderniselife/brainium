@@ -1,53 +1,52 @@
-# Install Cursor Second Brain
+# Install Agent Second Brain
 
 ## TLDR
 
-Run `scripts/install.sh` against your repo root, commit, and ensure Cursor loads `.cursor/rules/second-brain.mdc` with **Always Apply** (default when `alwaysApply: true` in the file).
+`./scripts/install.sh TARGET [--all|--cursor|--claude|--generic] [--force]`
+
+Default with no platform flags: **`--all`** (docs + Cursor + Claude + generic).
 
 ## Prerequisites
 
-- Git repo (recommended — second brain is meant to be versioned)
-- [Cursor](https://cursor.com) with project rules + agent skills enabled
+- Git repository (recommended)
+- At least one of: [Cursor](https://cursor.com), [Claude Code](https://docs.anthropic.com/en/docs/claude-code), or any agent that reads `AGENTS.md`
 
-## Automated install
+## Platform guides
 
-```bash
-git clone https://github.com/YOUR_USER/cursor-second-brain.git  # after you publish
-cd cursor-second-brain
-./scripts/install.sh ~/Projects/my-app
-```
+| Platform | After install | Verify |
+|----------|---------------|--------|
+| **Cursor** | Rule `alwaysApply: true` on `second-brain.mdc` | Agent logs session without being asked |
+| **Claude Code** | `CLAUDE.md` + `.claude/skills/second-brain/` | Same; see [agents/claude/README.md](./agents/claude/README.md) |
+| **Codex CLI** | Copy skill to `~/.codex/skills/second-brain/` | Optional; see Claude README |
+| **Generic** | Root `AGENTS.md` points at `docs/second-brain/POLICY.md` | Paste [closeout prompt](./agents/generic/prompts/closeout-system.md) if needed |
 
-The script:
+## Claude Code (details)
 
-1. Creates `docs/second-brain/**` from `scaffold/` (skips overwriting existing files unless you pass `--force`)
-2. Copies `cursor/rules/second-brain.mdc` → `target/.cursor/rules/`
-3. Copies `cursor/skills/second-brain/SKILL.md` → `target/.cursor/skills/second-brain/`
+1. **Project skill** — `.claude/skills/second-brain/SKILL.md` (installed by `--claude` or `--all`).
+2. **CLAUDE.md** — install script appends `agents/claude/CLAUDE.md.fragment` if missing.
+3. **User-global skill** (optional):
 
-### Options
+   ```bash
+   mkdir -p ~/.claude/skills/second-brain
+   cp agents/claude/skills/second-brain/SKILL.md ~/.claude/skills/second-brain/
+   ```
 
-```bash
-./scripts/install.sh /path/to/repo           # merge scaffold (no overwrite)
-./scripts/install.sh /path/to/repo --force   # overwrite templates/READMEs from package
-```
+4. **Hooks** — optional; see [agents/claude/settings-notes.md](./agents/claude/settings-notes.md).
 
-## Manual install
+## Cursor (details)
 
-1. Copy `scaffold/docs/second-brain` → `your-repo/docs/second-brain`
-2. Copy `cursor/rules/second-brain.mdc` → `your-repo/.cursor/rules/`
-3. Copy `cursor/skills/second-brain/SKILL.md` → `your-repo/.cursor/skills/second-brain/`
+1. `.cursor/rules/second-brain.mdc` — always apply.
+2. `.cursor/skills/second-brain/SKILL.md` — end-of-turn checklist.
 
-## After install
+## Generic (details)
 
-1. Open the project in Cursor.
-2. Confirm **Rules** includes `second-brain` (always apply).
-3. Optionally add user rule: “Follow second-brain skill on every substantive task.”
-4. Create `docs/decisions/register.md` if you use the `decisions/` folder and ADRs.
-5. Add a project-specific extension rule from `extensions/` if you need extra incident triggers.
+1. `AGENTS.md` from template — add your stack commands below the second-brain section.
+2. `docs/second-brain/POLICY.md` — copy of `core/POLICY.md`.
 
 ## Upgrading
 
-Re-run install without `--force` to add new template files only; with `--force` to refresh stock READMEs and rules from this package (back up local edits first).
+Re-run with `--force` to replace agent hooks and refresh scaffold READMEs. Back up custom edits first.
 
 ## Uninstall
 
-Remove `.cursor/rules/second-brain.mdc`, `.cursor/skills/second-brain/`, and `docs/second-brain/` if you no longer want the workflow. Your git history keeps past captures.
+Remove installed paths listed in the install script output. Git history retains past captures.
