@@ -1,0 +1,28 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    name: Node ${{ matrix.node }} · ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-15]
+        node: [18, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: git config --global init.defaultBranch main
+      - run: npm test
+      - name: Installer still works on a fresh directory
+        run: |
+          mkdir -p "$RUNNER_TEMP/proj" && git -C "$RUNNER_TEMP/proj" init -q
+          ./scripts/install.sh "$RUNNER_TEMP/proj" --all
+          test -f "$RUNNER_TEMP/proj/docs/brainium/POLICY.md"
