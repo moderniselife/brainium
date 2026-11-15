@@ -1,11 +1,13 @@
 # Brainium
 
-Git-backed agent memory for **Cursor**, **Claude Code**, and **generic** agents.  
+Git-backed agent memory for **Cursor**, **Claude Code**, **Claude Desktop**, **Grok Bot** and **generic** agents.  
 Repository: [github.com/moderniselife/brainium](https://github.com/moderniselife/brainium)
 
 ## TLDR
 
-Portable **git-backed agent memory**: session logs, failures, learnings, and promotion into each tool’s hooks. One `docs/brainium/` tree; install the adapters you use.
+Portable **git-backed agent memory**: session logs, failures, learnings, and promotion into each tool’s hooks. One `docs/brainium/` tree per project; install the adapters you use.
+
+**New in 0.2 — a second brain that survives switching apps and accounts:** a **personal brain** (preferences, cross-project learnings, and **agent cards** to recreate any agent on a new account), an **MCP server** so Claude Code, Claude Desktop and Cursor can search and write both brains, and **session capture** for Claude Code that your own AI files (or Anthropic, OpenAI, Bonsai, any OpenAI-compatible API, or no AI at all). See [docs/SECOND-BRAIN.md](./docs/SECOND-BRAIN.md). [Prism](https://github.com/moderniselife/prism) wires it into every profile for you.
 
 ## What you get
 
@@ -16,6 +18,9 @@ Portable **git-backed agent memory**: session logs, failures, learnings, and pro
 | **Cursor** | `.cursor/rules/brainium.mdc` + `.cursor/skills/brainium/` |
 | **Claude Code** | `.claude/skills/brainium/` + `CLAUDE.md` section |
 | **Generic** | `AGENTS.md` + [prompt snippet](./agents/generic/prompts/closeout-system.md) |
+| **Personal brain** | `brainium init-personal` → `~/Brainium` (sessions, memories, learnings, **agents/** cards…) |
+| **MCP server** | `brainium mcp` — `brain_search`, `brain_log`, `agent_card_save`, `brain_pending`… |
+| **Capture** | Claude Code `SessionEnd` hook → redacted, private queue → filed by your AI or a summarizer |
 
 ## Quick install
 
@@ -40,13 +45,17 @@ Then commit the new files. Details: [INSTALL.md](./INSTALL.md).
 2. **Incidents need files** — `failures/` + `learnings/`, not session-only prose.
 3. **Index tables are mandatory** for new slugs.
 4. **Promote repeats** into Cursor rules, Claude skills, or `AGENTS.md`.
-5. **No secrets** in Brainium.
+5. **No secrets** in Brainium — and Brainium redacts what it can before anything touches disk.
+6. **Memory belongs to you, not an account** — switch Cursor, Claude or Grok accounts and your brain comes along.
 
 ## Layout
 
 ```
 core/POLICY.md              # single policy source
-scaffold/docs/brainium/ # tree copied into projects
+scaffold/docs/brainium/     # tree copied into projects
+scaffold/personal/          # personal brain (incl. agents/ cards)
+bin/brainium.mjs            # CLI: init-personal, wire, mcp, capture, distill (zero deps, Node 18.17+)
+cli/                        # CLI library, templates and tests (npm test)
 agents/
   cursor/                   # Cursor rule + skill
   claude/                   # Claude skill + CLAUDE.md fragment

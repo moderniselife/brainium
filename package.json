@@ -1,0 +1,17 @@
+{
+  "name": "brainium",
+  "version": "0.2.0",
+  "description": "Git-backed agent memory for Cursor, Claude Code, Claude Desktop, Grok Bot and generic agents — project and personal brains, an MCP server, and session capture.",
+  "type": "module",
+  "bin": {
+    "brainium": "bin/brainium.mjs"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "scripts": {
+    "test": "node --test cli/test/*.test.mjs"
+  },
+  "license": "MIT",
+  "repository": "github:moderniselife/brainium"
+}
