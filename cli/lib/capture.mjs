@@ -89,7 +89,7 @@ export function topicOf(parsed) {
 }
 
 /** SessionEnd hook body. Returns the pending record, or null when skipped. */
-export function capture(hook, config, { spawnDistill = true } = {}) {
+export function capture(hook, config, { spawnDistill = true, brain = "" } = {}) {
   if (!config.capture) return null;
   const transcript = hook.transcript_path;
   if (!transcript || !existsSync(transcript)) return null;
@@ -107,6 +107,8 @@ export function capture(hook, config, { spawnDistill = true } = {}) {
     sessionId,
     cwd,
     projectBrain: findProjectBrain(cwd),
+    // The profile's own brain (wire puts --brain on the hook), used when there's no project brain.
+    brain: brain || "",
     endedAt: now.toISOString(),
     reason: hook.reason || "",
     topic: topicOf(parsed),
@@ -138,10 +140,11 @@ export function getPending(config, id) {
 }
 
 /** File a pending capture as a session entry and mark it done. */
-export function resolvePending(config, id, { title, body, scope = "auto", source = "captured" }) {
+export function resolvePending(config, id, { title, body, scope = "auto", source = "captured", agent = "", defaultBrain = "" }) {
   const rec = getPending(config, id);
   const roots = brainRoots(config, rec.cwd);
-  const result = logEntry(roots, config, { kind: "session", title: title || rec.topic, body, scope, source, now: new Date(rec.endedAt) });
+  const fallback = (rec.brain && roots[rec.brain] ? rec.brain : "") || defaultBrain || config.defaultBrain || "personal";
+  const result = logEntry(roots, config, { kind: "session", title: title || rec.topic, body, scope, agent, source, defaultBrain: fallback, now: new Date(rec.endedAt) });
   // Keep a small receipt (no digest); the redacted raw transcript stays in the raw store.
   const { digest, ...meta } = rec;
   writeJsonAtomic(join(doneDir(config), `${rec.id}.json`), { ...meta, filedAt: new Date().toISOString(), filedTo: result.path }, 0o600);

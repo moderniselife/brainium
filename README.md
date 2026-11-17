@@ -9,6 +9,8 @@ Portable **git-backed agent memory**: session logs, failures, learnings, and pro
 
 **New in 0.2 — a second brain that survives switching apps and accounts:** a **personal brain** (preferences, cross-project learnings, and **agent cards** to recreate any agent on a new account), an **MCP server** so Claude Code, Claude Desktop and Cursor can search and write both brains, and **session capture** for Claude Code that your own AI files (or Anthropic, OpenAI, Bonsai, any OpenAI-compatible API, or no AI at all). See [docs/SECOND-BRAIN.md](./docs/SECOND-BRAIN.md). [Prism](https://github.com/moderniselife/prism) wires it into every profile for you.
 
+**New in 0.3 — team brains, agents and routines:** add as many brains as you like (one per team, Prism group, profile or project). Each keeps a `shared/` area every agent sees and an `agents/<name>/` folder per agent for its own notes and supporting docs, and **routines** that run prompts, upkeep jobs or shell commands on a schedule. See [docs/TEAMS-AND-ROUTINES.md](./docs/TEAMS-AND-ROUTINES.md).
+
 ## What you get
 
 | Piece | Purpose |
@@ -21,6 +23,8 @@ Portable **git-backed agent memory**: session logs, failures, learnings, and pro
 | **Personal brain** | `brainium init-personal` → `~/Brainium` (sessions, memories, learnings, **agents/** cards…) |
 | **MCP server** | `brainium mcp` — `brain_search`, `brain_log`, `agent_card_save`, `brain_pending`… |
 | **Capture** | Claude Code `SessionEnd` hook → redacted, private queue → filed by your AI or a summarizer |
+| **Team brains** | `brainium brain add NAME DIR --create` → `shared/`, `agents/<name>/`, `routines/` |
+| **Routines** | `routines/<name>.md` → prompts (Claude Code / Codex), upkeep (`sync`, `distill`, `digest`) or shell, run by `brainium scheduler install` (launchd / systemd / Task Scheduler) or Prism |
 
 ## Quick install
 

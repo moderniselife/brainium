@@ -36,7 +36,19 @@ export const DEFAULTS = Object.freeze({
   capture: false,
   commit: true,
   summarizer: { provider: "agent", url: "", model: "", apiKeyEnv: "", apiKey: "" },
+  // Named brains besides personal: { "mojo-layers": { path: "/…/mojo-layers" } }.
+  brains: {},
+  // The brain used when a call names none (the MCP server's $BRAINIUM_BRAIN wins).
+  defaultBrain: "personal",
+  // What runs routines: "os" (launchd / systemd / Task Scheduler, see
+  // `brainium scheduler install`), "prism" (Prism, while it's open) or "off".
+  scheduler: { mode: "off" },
+  // Where the agent CLIs live when they aren't on PATH (GUI apps and
+  // launchd don't get your shell's PATH). Empty = search the usual places.
+  routines: { claudePath: "", codexPath: "" },
 });
+
+export const SCHEDULER_MODES = ["os", "prism", "off"];
 
 export function loadConfig(env = process.env) {
   const path = configPath(env);
@@ -48,7 +60,14 @@ export function loadConfig(env = process.env) {
       saved = {};
     }
   }
-  return { ...DEFAULTS, ...saved, summarizer: { ...DEFAULTS.summarizer, ...(saved.summarizer || {}) } };
+  return {
+    ...DEFAULTS,
+    ...saved,
+    summarizer: { ...DEFAULTS.summarizer, ...(saved.summarizer || {}) },
+    brains: { ...(saved.brains || {}) },
+    scheduler: { ...DEFAULTS.scheduler, ...(saved.scheduler || {}) },
+    routines: { ...DEFAULTS.routines, ...(saved.routines || {}) },
+  };
 }
 
 /** The summarizer with provider defaults filled in (url/model/key env). */
@@ -68,26 +87,59 @@ export function resolvedSummarizer(config, env = process.env) {
 }
 
 const KEYS = new Set([
-  "personalBrain", "rawStore", "capture", "commit",
+  "personalBrain", "rawStore", "capture", "commit", "defaultBrain",
   "summarizer.provider", "summarizer.url", "summarizer.model", "summarizer.apiKeyEnv", "summarizer.apiKey",
+  "scheduler.mode", "routines.claudePath", "routines.codexPath",
 ]);
+
+const NESTED = ["summarizer", "scheduler", "routines"];
+
+function readSaved(env) {
+  const path = configPath(env);
+  return existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
+}
 
 export function setConfig(key, raw, env = process.env) {
   if (!KEYS.has(key)) throw new Error(`unknown config key "${key}" (known: ${[...KEYS].join(", ")})`);
   if (key === "summarizer.provider" && !PROVIDERS.includes(String(raw))) {
     throw new Error(`summarizer.provider must be one of: ${PROVIDERS.join(", ")}`);
   }
-  const path = configPath(env);
-  let saved = {};
-  if (existsSync(path)) saved = JSON.parse(readFileSync(path, "utf8"));
+  if (key === "scheduler.mode" && !SCHEDULER_MODES.includes(String(raw))) {
+    throw new Error(`scheduler.mode must be one of: ${SCHEDULER_MODES.join(", ")}`);
+  }
+  const saved = readSaved(env);
+  if (key === "defaultBrain" && raw !== "personal" && !(saved.brains || {})[String(raw)]) {
+    throw new Error(`no brain called "${raw}" (add it with \`brainium brain add ${raw} DIR\`)`);
+  }
   const value = key === "capture" || key === "commit" ? /^(1|true|yes|on)$/i.test(String(raw)) : String(raw);
-  if (key.startsWith("summarizer.")) {
-    saved.summarizer = { ...(saved.summarizer || {}), [key.slice("summarizer.".length)]: value };
+  const [group, sub] = key.split(".");
+  if (sub && NESTED.includes(group)) {
+    saved[group] = { ...(saved[group] || {}), [sub]: value };
   } else {
     saved[key] = value;
   }
   // 0600: the file may hold an API key if the user chose to store one.
-  writeJsonAtomic(path, saved, 0o600);
+  writeJsonAtomic(configPath(env), saved, 0o600);
+  return loadConfig(env);
+}
+
+/** Register (or re-point) a named brain. */
+export function addBrain(name, path, env = process.env) {
+  const saved = readSaved(env);
+  saved.brains = { ...(saved.brains || {}), [name]: { path } };
+  writeJsonAtomic(configPath(env), saved, 0o600);
+  return loadConfig(env);
+}
+
+/** Forget a named brain (its folder is left alone). */
+export function removeBrain(name, env = process.env) {
+  const saved = readSaved(env);
+  const brains = { ...(saved.brains || {}) };
+  if (!brains[name]) throw new Error(`no brain called "${name}"`);
+  delete brains[name];
+  saved.brains = brains;
+  if (saved.defaultBrain === name) delete saved.defaultBrain;
+  writeJsonAtomic(configPath(env), saved, 0o600);
   return loadConfig(env);
 }
 
