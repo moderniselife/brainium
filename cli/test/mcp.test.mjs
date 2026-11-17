@@ -32,7 +32,7 @@ test("stdio MCP session: initialize, list tools, log, search, read", async () =>
     assert.match(init.result.instructions, /brain_pending/);
     child.stdin.write(JSON.stringify({ jsonrpc: "2.0", method: "notifications/initialized" }) + "\n");
     const tools = (await call("tools/list", {})).result.tools.map((t) => t.name);
-    for (const t of ["brain_search", "brain_log", "agent_card_save", "brain_pending", "brain_resolve"]) assert.ok(tools.includes(t), t);
+    for (const t of ["brain_search", "brain_log", "brain_share", "agent_list", "agent_card_save", "routine_list", "routine_save", "brain_pending", "brain_resolve"]) assert.ok(tools.includes(t), t);
 
     const logged = await tool("brain_log", { kind: "session", title: "MCP works", body: "**What we did** — tested the server" });
     assert.match(logged.content[0].text, /Logged to project:sessions\//);

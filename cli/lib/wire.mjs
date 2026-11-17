@@ -12,7 +12,7 @@
 import { existsSync, readFileSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
-import { readJsonObject, removeManagedBlock, upsertManagedBlock, writeFileAtomic, writeJsonAtomic } from "./fsutil.mjs";
+import { readJsonObject, removeManagedBlock, slugify, upsertManagedBlock, writeFileAtomic, writeJsonAtomic } from "./fsutil.mjs";
 import { PKG_ROOT } from "./personal.mjs";
 import { remoteUrl } from "./git.mjs";
 
@@ -29,17 +29,18 @@ function shellQuote(s) {
   return /^[A-Za-z0-9_./:@%+=-]+$/.test(s) ? s : `"${String(s).replace(/(["\\$`])/g, "\\$1")}"`;
 }
 
-export function mcpEntry(node = process.execPath, cli = CLI_PATH) {
-  return { type: "stdio", command: node, args: [cli, "mcp"], env: {} };
+export function mcpEntry(node = process.execPath, cli = CLI_PATH, brain = "") {
+  // BRAINIUM_BRAIN makes this profile's calls use its own brain by default.
+  return { type: "stdio", command: node, args: [cli, "mcp"], env: brain && brain !== "personal" ? { BRAINIUM_BRAIN: brain } : {} };
 }
 
-function hookCommand(node, cli, sub) {
-  return `${shellQuote(node)} ${shellQuote(cli)} ${sub}`;
+function hookCommand(node, cli, sub, brain = "") {
+  return `${shellQuote(node)} ${shellQuote(cli)} ${sub}${brain && sub === "capture" ? ` --brain ${shellQuote(brain)}` : ""}`;
 }
 
 const OUR_HOOK = /brainium(\.mjs)?"?\s+(capture|session-start)\b/;
 
-function setHooks(settings, enabled, node, cli) {
+function setHooks(settings, enabled, node, cli, brain = "") {
   const hooks = { ...(settings.hooks || {}) };
   for (const event of ["SessionEnd", "SessionStart"]) {
     const groups = (hooks[event] || [])
@@ -47,7 +48,7 @@ function setHooks(settings, enabled, node, cli) {
       .filter((g) => g.hooks.length > 0);
     if (enabled) {
       const sub = event === "SessionEnd" ? "capture" : "session-start";
-      groups.push({ hooks: [{ type: "command", command: hookCommand(node, cli, sub), timeout: 30 }] });
+      groups.push({ hooks: [{ type: "command", command: hookCommand(node, cli, sub, brain), timeout: 30 }] });
     }
     if (groups.length) hooks[event] = groups;
     else delete hooks[event];
@@ -78,7 +79,8 @@ function setMcp(file, enabled, entry) {
 
 /**
  * Wire (or with enabled=false, unwire) one profile.
- * opts: { app, profileDir, system, capture, personalBrain, node, cli, cursorHome, env }
+ * opts: { app, profileDir, system, capture, personalBrain, brain, brainPath, node, cli, cursorHome, env }
+ * `brain` names the brain this profile uses by default (personal when empty).
  */
 export function wire(opts, enabled = true) {
   const { app, system = false, capture = false } = opts;
@@ -88,12 +90,16 @@ export function wire(opts, enabled = true) {
   const changed = [];
   if (!APPS.includes(app)) throw new Error(`app must be one of: ${APPS.join(", ")}`);
   const personal = resolve(opts.personalBrain || join(homedir(), "Brainium"));
+  const brain = opts.brain && opts.brain !== "personal" ? opts.brain : "";
+  const brainLabel = brain ? `${brain} (${opts.brainPath || "see brain_info"})` : `personal (${personal})`;
+  const entry = mcpEntry(node, cli, brain);
+  const vars = { PERSONAL_BRAIN: personal, BRAIN: brainLabel };
 
   if (app === "claude-code") {
     const dir = resolve(opts.profileDir || join(homedir(), ".claude"));
     const skill = join(dir, "skills", "brainium", "SKILL.md");
     if (enabled) {
-      const text = template("claude-skill.md", { PERSONAL_BRAIN: personal });
+      const text = template("claude-skill.md", vars);
       if (!existsSync(skill) || readFileSync(skill, "utf8") !== text) {
         writeFileAtomic(skill, text);
         changed.push(skill);
@@ -105,7 +111,7 @@ export function wire(opts, enabled = true) {
     const claudeMd = join(dir, "CLAUDE.md");
     const old = existsSync(claudeMd) ? readFileSync(claudeMd, "utf8") : "";
     const next = enabled
-      ? upsertManagedBlock(old, template("claude-block.md", { PERSONAL_BRAIN: personal }))
+      ? upsertManagedBlock(old, template("claude-block.md", vars))
       : removeManagedBlock(old);
     if (next !== old) {
       if (!enabled && next.trim() === "") rmSync(claudeMd, { force: true });
@@ -113,10 +119,10 @@ export function wire(opts, enabled = true) {
       changed.push(claudeMd);
     }
     const state = claudeStateFile(dir, { system, env });
-    if (setMcp(state, enabled, mcpEntry(node, cli))) changed.push(state);
+    if (setMcp(state, enabled, entry)) changed.push(state);
     const settingsFile = join(dir, "settings.json");
     const settings = readJsonObject(settingsFile);
-    const nextSettings = setHooks(settings, enabled && capture, node, cli);
+    const nextSettings = setHooks(settings, enabled && capture, node, cli, brain);
     if (JSON.stringify(nextSettings) !== JSON.stringify(settings)) {
       writeJsonAtomic(settingsFile, nextSettings);
       changed.push(settingsFile);
@@ -126,11 +132,13 @@ export function wire(opts, enabled = true) {
 
   if (app === "claude-desktop") {
     const file = join(resolve(opts.profileDir), "claude_desktop_config.json");
-    if (setMcp(file, enabled, mcpEntry(node, cli))) changed.push(file);
+    if (setMcp(file, enabled, entry)) changed.push(file);
     return { app, changed, notes: ["Restart Claude Desktop for MCP changes to apply."] };
   }
 
   if (app === "cursor") {
+    // Cursor reads one mcp.json for every profile, so it always uses the
+    // default brain; agents can still name a brain on each call.
     const file = join(opts.cursorHome || join(homedir(), ".cursor"), "mcp.json");
     if (setMcp(file, enabled, mcpEntry(node, cli))) changed.push(file);
     return {
@@ -141,13 +149,25 @@ export function wire(opts, enabled = true) {
   }
 
   // grok-bot: the agent runs on xAI's cloud; nothing local to wire.
-  return { app, changed, notes: [], snippet: enabled ? grokSnippet(personal) : "" };
+  return { app, changed, notes: [], snippet: enabled ? grokSnippet(opts.brainPath || personal) : "" };
 }
 
-export function grokSnippet(personalBrain, agentName = "") {
-  const remote = remoteUrl(personalBrain);
+/** Instructions for a Grok Bot agent, which reaches the brain through its GitHub connector. */
+export function grokSnippet(brainPath, agentName = "") {
+  const remote = remoteUrl(brainPath);
   return template("grok-snippet.md", {
-    REMOTE: remote ? `\`${remote}\`` : "`<your personal brain's GitHub repo — add a remote first>`",
-    AGENT_SLUG: agentName ? agentName.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "<this-agent>",
+    REMOTE: remote ? `\`${remote}\`` : "`<this brain's GitHub repo — add a remote first>`",
+    AGENT_NAME: agentName || "<this agent's name>",
+    AGENT_SLUG: agentName ? slugify(agentName) : "<this-agent>",
+  });
+}
+
+/** Lines to add to any agent's instructions (a Claude Code subagent, a Desktop project…) so it uses its own folder. */
+export function agentSnippet(agentName, brain = "") {
+  if (!agentName) throw new Error("--agent NAME is required");
+  return template("agent-snippet.md", {
+    AGENT_NAME: agentName,
+    BRAIN_CLAUSE: brain && brain !== "personal" ? ` in the "${brain}" brain` : "",
+    BRAIN_ARG: brain && brain !== "personal" ? ` and \`brain: "${brain}"\`` : "",
   });
 }

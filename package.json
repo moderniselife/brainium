@@ -1,7 +1,7 @@
 {
   "name": "brainium",
-  "version": "0.2.0",
-  "description": "Git-backed agent memory for Cursor, Claude Code, Claude Desktop, Grok Bot and generic agents — project and personal brains, an MCP server, and session capture.",
+  "version": "0.3.0",
+  "description": "Git-backed agent memory for Cursor, Claude Code, Claude Desktop, Grok Bot and generic agents — project, personal and team brains with per-agent notes, scheduled routines, an MCP server, and session capture.",
   "type": "module",
   "bin": {
     "brainium": "bin/brainium.mjs"
