@@ -704,17 +704,18 @@ export function digest(root, since) {
 // Editing routines
 
 /** Create a routine from the template (disabled, so nothing runs until you've looked at it). */
-export function newRoutine(config, { brain, name, type = "prompt" }) {
+export function newRoutine(config, { brain, name, type = "prompt", profile = "", agent = "", app = "claude-code" }) {
   const roots = brainRoots(config, null);
   if (!roots[brain] || brain === "project") throw new Error(`no brain called "${brain}"`);
   if (!TYPES.includes(type)) throw new Error(`type must be ${TYPES.join(", ")}`);
   const slug = slugify(name);
   const file = join(roots[brain], "routines", `${slug}.md`);
   if (existsSync(file)) throw new Error(`${brain}/${slug} already exists`);
-  const lines = ["---", `name: ${name}`, `schedule: "0 9 * * 1-5"`, `type: ${type}`, "agent: ", "enabled: false"];
+  const q = (v) => (/^[\w ./~@:+-]*$/.test(String(v)) && !/^\s|\s$/.test(String(v)) ? String(v) : JSON.stringify(String(v)));
+  const lines = ["---", `name: ${q(name)}`, `schedule: "0 9 * * 1-5"`, `type: ${type}`, `agent: ${agent ? q(agent) : ""}`, "enabled: false"];
   let body = "";
   if (type === "prompt") {
-    lines.splice(5, 0, "app: claude-code", "profile: ~/.claude", "args: --permission-mode acceptEdits", "timeout: 20m");
+    lines.splice(5, 0, `app: ${app === "codex" ? "codex" : "claude-code"}`, `profile: ${profile ? q(profile) : app === "codex" ? "~/.codex" : "~/.claude"}`, "args: --permission-mode acceptEdits", "timeout: 20m");
     body = "Describe what this routine should do. It runs headlessly, so be specific about what to read and where to log the result.";
   } else if (type === "shell") {
     lines.splice(5, 0, "timeout: 10m");

@@ -73,6 +73,11 @@ test("listing finds routines per brain and reports problems", () => {
     assert.equal(rs[1].enabled, false);
     assert.equal(rs[1].type, "prompt");
     assert.throws(() => newRoutine(config(), { brain: "mojo", name: "Brief" }), /already exists/);
+    newRoutine(config(), { brain: "mojo", name: "Night watch", agent: "Ops", profile: "/Users/joe/.claude_code_profiles/Mojo Layers" });
+    const nw = listRoutines(config()).find((r) => r.slug === "night-watch");
+    assert.equal(nw.agent, "Ops");
+    assert.equal(nw.profile, "/Users/joe/.claude_code_profiles/Mojo Layers");
+    assert.deepEqual(nw.errors, []);
   } finally { restore(); }
 });
 

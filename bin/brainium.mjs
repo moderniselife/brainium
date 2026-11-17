@@ -36,7 +36,7 @@ Brains (one per team, Prism group, profile or project — besides personal):
 
 Routines (scheduled prompts, upkeep jobs and shell commands in a brain's routines/):
   brainium routines [--brain NAME]      List with next/last run and approval
-  brainium routines new NAME --brain B [--type prompt|upkeep|shell]
+  brainium routines new NAME --brain B [--type prompt|upkeep|shell] [--agent A] [--profile DIR] [--app claude-code|codex]
   brainium routines approve REF|--all   Allow a prompt/shell routine to run on this machine
   brainium routines revoke REF
   brainium routines enable|disable REF
@@ -266,7 +266,8 @@ async function main() {
         print(args, setEnabled(config, ref, sub === "enable"), `${ref} ${sub === "enable" ? "on" : "off"}.`);
       } else if (sub === "new") {
         if (!ref || typeof args.brain !== "string") throw new Error("usage: brainium routines new NAME --brain BRAIN [--type prompt|upkeep|shell]");
-        const r = newRoutine(config, { brain: args.brain, name: ref, type: typeof args.type === "string" ? args.type : "prompt" });
+        const opt = (k) => (typeof args[k] === "string" ? args[k] : "");
+        const r = newRoutine(config, { brain: args.brain, name: ref, type: opt("type") || "prompt", profile: opt("profile"), agent: opt("agent"), app: opt("app") || "claude-code" });
         print(args, r, `Created ${r.ref} (off): ${r.file}\nEdit it, then: brainium routines enable ${r.ref} && brainium routines approve ${r.ref}`);
       } else if (sub === "run") {
         if (!ref) throw new Error("usage: brainium routines run REF");
