@@ -13,7 +13,7 @@
 // exact content (any edit needs approving again). Upkeep jobs are built in.
 import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync, writeSync } from "node:fs";
+import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, statSync, writeSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -443,38 +443,30 @@ export function richPath(env = process.env) {
   return [...new Set([...(env.PATH || "").split(delimiter).filter(Boolean), ...extra])].join(delimiter);
 }
 
-/** Versioned copies apps keep in their own folders, newest first (e.g. the Claude Code that ships with Claude Desktop). */
-function bundledTools(name) {
-  if (process.platform !== "darwin" || name !== "claude") return [];
-  const base = join(homedir(), "Library", "Application Support", "Claude");
-  const out = [];
-  for (const folder of ["claude-code-vm", "claude-code"]) {
-    const dir = join(base, folder);
-    if (!existsSync(dir)) continue;
-    const key = (v) => v.split(/[^0-9]+/).filter(Boolean).map(Number);
-    const versions = readdirSync(dir).filter((v) => /^\d/.test(v)).sort((a, b) => {
-      const x = key(a), y = key(b);
-      for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (y[i] || 0) - (x[i] || 0);
-      return 0;
-    });
-    for (const v of versions) out.push(join(dir, v, name));
+/** True when the file is a binary for another OS (e.g. a Linux build inside an app's VM folder). */
+function foreignBinary(p) {
+  try {
+    const fd = openSync(p, "r");
+    const head = Buffer.alloc(4);
+    readSync(fd, head, 0, 4, 0);
+    closeSync(fd);
+    const elf = head[0] === 0x7f && head[1] === 0x45 && head[2] === 0x4c && head[3] === 0x46;
+    const macho = [0xfeedface, 0xfeedfacf, 0xcefaedfe, 0xcffaedfe, 0xcafebabe].includes(head.readUInt32BE(0));
+    return (process.platform === "darwin" && elf) || (process.platform === "linux" && macho);
+  } catch {
+    return false;
   }
-  return out;
 }
 
 export function findTool(name, configured, env = process.env) {
   if (configured && existsSync(expandHome(configured))) return expandHome(configured);
-  for (const p of bundledTools(name)) {
-    try {
-      if (statSync(p).isFile()) return p;
-    } catch { /* next */ }
-  }
+
   const exts = process.platform === "win32" ? [".cmd", ".exe", ".bat", ""] : [""];
   for (const dir of richPath(env).split(delimiter)) {
     for (const ext of exts) {
       const p = join(dir, name + ext);
       try {
-        if (statSync(p).isFile()) return p;
+        if (statSync(p).isFile() && !foreignBinary(p)) return p;
       } catch { /* keep looking */ }
     }
   }
@@ -635,12 +627,12 @@ async function execPrompt(r, config, { env }) {
   const cwd = r.cwd || r.brainRoot;
   if (r.app === "codex") {
     const bin = findTool("codex", config.routines?.codexPath, env);
-    if (!bin) throw new Error("codex not found. Install it, or set routines.codexPath");
+    if (!bin) throw new Error("Codex's CLI (codex) isn't installed on this machine. Install it, or point Brainium at it: brainium config set routines.codexPath /path/to/codex");
     const extra = r.profile ? { CODEX_HOME: r.profile } : {};
     return runProcess(bin, ["exec", ...splitArgs(r.args), prompt], { cwd, env: routineEnv(r, env, extra), timeoutMs: r.timeoutMs });
   }
   const bin = findTool("claude", config.routines?.claudePath, env);
-  if (!bin) throw new Error("claude (Claude Code) not found. Install it, or set routines.claudePath");
+  if (!bin) throw new Error("Claude Code's CLI (claude) isn't installed on this machine. Install it (https://docs.claude.com/en/docs/claude-code/setup), or point Brainium at it: brainium config set routines.claudePath /path/to/claude");
   // The default ~/.claude profile runs without CLAUDE_CONFIG_DIR, exactly like
   // opening Claude Code normally (setting it would move its state file).
   const isDefault = !r.profile || resolve(r.profile) === resolve(join(homedir(), ".claude"));
