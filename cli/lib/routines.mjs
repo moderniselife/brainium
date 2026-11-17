@@ -443,8 +443,32 @@ export function richPath(env = process.env) {
   return [...new Set([...(env.PATH || "").split(delimiter).filter(Boolean), ...extra])].join(delimiter);
 }
 
+/** Versioned copies apps keep in their own folders, newest first (e.g. the Claude Code that ships with Claude Desktop). */
+function bundledTools(name) {
+  if (process.platform !== "darwin" || name !== "claude") return [];
+  const base = join(homedir(), "Library", "Application Support", "Claude");
+  const out = [];
+  for (const folder of ["claude-code-vm", "claude-code"]) {
+    const dir = join(base, folder);
+    if (!existsSync(dir)) continue;
+    const key = (v) => v.split(/[^0-9]+/).filter(Boolean).map(Number);
+    const versions = readdirSync(dir).filter((v) => /^\d/.test(v)).sort((a, b) => {
+      const x = key(a), y = key(b);
+      for (let i = 0; i < Math.max(x.length, y.length); i++) if ((x[i] || 0) !== (y[i] || 0)) return (y[i] || 0) - (x[i] || 0);
+      return 0;
+    });
+    for (const v of versions) out.push(join(dir, v, name));
+  }
+  return out;
+}
+
 export function findTool(name, configured, env = process.env) {
   if (configured && existsSync(expandHome(configured))) return expandHome(configured);
+  for (const p of bundledTools(name)) {
+    try {
+      if (statSync(p).isFile()) return p;
+    } catch { /* next */ }
+  }
   const exts = process.platform === "win32" ? [".cmd", ".exe", ".bat", ""] : [""];
   for (const dir of richPath(env).split(delimiter)) {
     for (const ext of exts) {

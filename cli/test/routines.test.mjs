@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import { chmodSync, existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { sandbox, put, useEnv, fake } from "./helpers.mjs";
+import { sandbox, put, useEnv } from "./helpers.mjs";
 import { initBrain, initPersonal } from "../lib/personal.mjs";
 import { addBrain, loadConfig, setConfig } from "../lib/config.mjs";
 import {
@@ -138,7 +138,7 @@ test("tick: waits for the first slot, starts what's due once, skips unapproved a
 test("run: shell output is redacted, logged to the agent and kept raw on this machine; a slot runs once", async () => {
   const { mojo, raw, env, config, restore } = team();
   try {
-    saveRoutine(config(), { brain: "mojo", name: "Report", schedule: "@daily", type: "shell", agent: "Ops", body: `echo "brain=$BRAINIUM_BRAIN agent=$BRAINIUM_AGENT routine=$BRAINIUM_ROUTINE"; echo key=${fake("sk-", "ant-api03-", "abcdefghijklmnopqrstuv")}` });
+    saveRoutine(config(), { brain: "mojo", name: "Report", schedule: "@daily", type: "shell", agent: "Ops", body: `echo "brain=$BRAINIUM_BRAIN agent=$BRAINIUM_AGENT routine=$BRAINIUM_ROUTINE"; echo "key=sk-ant-$(echo api03-abcdefghijklmnopqrstuv)"` });
     await assert.rejects(runRoutine(config(), "mojo/report", { env }), /isn't approved/);
     approveRoutine(config(), "mojo/report", env);
     const r = await runRoutine(config(), "mojo/report", { env });

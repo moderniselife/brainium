@@ -1,7 +1,7 @@
 // Best-effort git: commit brain changes locally. Never pushes, never throws.
 import { execFileSync } from "node:child_process";
 import { existsSync, realpathSync } from "node:fs";
-import { join, relative } from "node:path";
+import { basename, dirname, join, relative } from "node:path";
 
 function git(cwd, args) {
   return execFileSync("git", args, { cwd, stdio: ["ignore", "pipe", "pipe"], encoding: "utf8" });
@@ -31,7 +31,12 @@ function real(p) {
   try {
     return realpathSync(p);
   } catch {
-    return p;
+    // A deleted file has no real path; resolve its folder instead.
+    try {
+      return join(realpathSync(dirname(p)), basename(p));
+    } catch {
+      return p;
+    }
   }
 }
 
