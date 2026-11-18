@@ -1,35 +1,76 @@
 ---
 name: brainium
 description: >-
-  Mandatory end-of-conversation capture under docs/brainium (sessions,
-  failures, learnings, memories, questions, improvements, decisions). Use
-  before every substantive "done" reply in Cursor or any agent with this repo.
+  Second brain for this repo. At the start of work, check brain_pending and
+  search the brain (brain_search); before saying done on substantive work,
+  log it with brain_log (or into docs/brainium when the Brainium tools are not
+  connected), filing failures and learnings with their README indexes. The
+  user must not need to ask.
 ---
 
-# Brainium
+# Brainium (Cursor, project install)
 
-Read `core/POLICY.md` for the full incident bar. **Capture is automatic** — the user should not say “log this.”
+Canonical policy: `docs/brainium/POLICY.md` (or `docs/brainium/README.md`). For user-wide setup with the MCP server and session capture, run `brainium wire --app cursor`.
 
-## Session calendar day (check first)
+The user should not say "log this." **Capture is automatic.**
 
-- [ ] **Today’s `YYYY-MM-DD`** → correct `sessions/` file (calendar day). After midnight = new file; `00:xx` never on yesterday.
-- [ ] New day? → create file + `sessions/README.md` row.
+## Brains
 
-## End-of-turn checklist
+- **Project brain** — `docs/brainium/` in this repo: code, tickets, incidents, decisions for *this* project.
+- **Profile / team brain** — the brain Brainium calls use when you don't name one. A team brain has `shared/`, `agents/<name>/` and `routines/`.
+- **Personal brain** — the user's preferences, agent cards and cross-project learnings. It follows the user across apps and accounts.
 
-- [ ] Append **session** → `docs/brainium/sessions/YYYY-MM-DD.md` (**today only**)
-- [ ] **Incidents?** → `failures/` (+ `learnings/`). Session alone = incomplete.
-- [ ] **Route** detail: learnings, failures, memories, questions, improvements, decisions
-- [ ] **Promotion:** new Cursor rule → `docs/brainium/rules/` + `.cursor/rules/`; skill → `docs/brainium/skills/` + `.cursor/skills/`
-- [ ] Update **`failures/README.md` and `learnings/README.md`** per new slug
-- [ ] User challenged missing doc? → failures + learnings + index + rule/skill bump same commit
-- [ ] `git commit` (and `git push` if project rules say so)
-- [ ] One line to user with paths
+## Agents
 
-## Templates
+Working as a named agent (your instructions give you a name, or you run as a named subagent or routine)? Pass **`agent: "<your name>"` on every Brainium call**:
 
-Under `docs/brainium/*/\_template.md` — see package scaffold or your installed copy.
+- `brain_search` covers your notes plus `shared/` (`everyone: true` for other agents' notes).
+- `brain_log` writes to your folder; `shared: true` when every agent should know it. `brain_share` moves a note into `shared/`.
+- Keep your card current with `agent_card_save`.
+
+Not a named agent? Leave `agent` out.
+
+## Start of work
+
+1. `brain_pending` — if captured sessions are waiting, read each with `brain_pending_get` and file a concise entry with `brain_resolve` (What we did / Learnings / Mistakes / Open threads / Artifacts).
+2. `brain_search` for the task's key terms when prior context could matter.
+
+## Before saying done (substantive work)
+
+With the Brainium MCP tools:
+
+- [ ] `brain_log` kind `session` (brain `auto` = this repo's `docs/brainium/`).
+- [ ] **Incidents?** → `failure` (+ `learning` when reusable). Session-only = incomplete.
+- [ ] Durable knowledge → `learning`; preferences → `memory`; researched Q&A → `question`; follow-ups → `improvement`; pre-ADR chatter → `decision`.
+- [ ] New or changed agent instructions → `agent_card_save`.
+- [ ] Recurring work the user wants on a schedule → `routine_save` (stays off until the user approves it on their machine).
+- [ ] One line to the user listing the brain paths updated.
+
+Without the tools, edit the files directly:
+
+- [ ] **Today's calendar date** → `docs/brainium/sessions/YYYY-MM-DD.md` (after midnight it's the new day's file; create it + a `sessions/README.md` row). Use `sessions/_template.md`.
+- [ ] Route detail to `learnings/`, `failures/`, `memories/`, `questions/`, `improvements/`, `decisions/`, each from its `_template.md`.
+- [ ] One row per new slug in **`failures/README.md` and `learnings/README.md`** (mandatory).
+- [ ] `git commit` (and `git push` if project rules say so).
+
+## Promotion
+
+- New guardrail → `docs/brainium/rules/` + `.cursor/rules/*.mdc` (and a pointer in `CLAUDE.md` if the project uses Claude Code too).
+- New workflow → `docs/brainium/skills/` + `.cursor/skills/` (or `.claude/skills/`).
+- User said you missed documentation? → `failures/` for the miss + `learnings/` + indexes + update this skill or the Cursor rule in the same commit.
+
+## Incident bar
+
+| Thread included… | File |
+|----------------|------|
+| Build / CI / deploy failed | `failures/` + `learnings/` if reusable |
+| User: broken, fake, untrustworthy | `failures/` |
+| Honesty gap (docs vs production) | `failures/` + audit doc if exists |
+| User: you should have documented X | `failures/` + `learnings/` + README indexes + hook update |
+
+Ask: *Would a co-founder call this a mistake or lesson?* → file before done.
 
 ## Noise control
 
-Distilled bullets; no secrets; trivial ack → one session line max.
+- Distilled bullets, not chat dumps. Trivial ack → one session line max.
+- **Never store secrets** — no keys, tokens, passwords or credentials (Brainium redacts what it can, but don't rely on it).

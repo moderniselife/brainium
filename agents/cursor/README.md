@@ -9,6 +9,8 @@
 ./scripts/install.sh /path/to/repo --cursor
 ```
 
+For the Brainium MCP tools in Cursor, also run `brainium wire --app cursor`.
+
 Confirm in Cursor **Settings → Rules** that `brainium` is active.
 
 Promotion log: `docs/brainium/rules/` and `docs/brainium/skills/`.
