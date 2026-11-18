@@ -18,22 +18,21 @@ Or manually:
 2. Merge `agents/claude/CLAUDE.md.fragment` into `your-repo/CLAUDE.md` (create file if missing).
 3. Ensure `docs/brainium/` exists (`install.sh` or `--all`).
 
-## User-wide skill (all repos)
+## User-wide setup (all repos)
 
 ```bash
-mkdir -p ~/.claude/skills/brainium
-cp agents/claude/skills/brainium/SKILL.md ~/.claude/skills/brainium/
+brainium wire --app claude-code
 ```
 
-Project `CLAUDE.md` + `docs/brainium/` still belong in each repo you care about.
+This installs the user-wide skill at `~/.claude/skills/brainium/`, the Brainium MCP server and session capture. Project `CLAUDE.md` + `docs/brainium/` still belong in each repo you care about.
 
 ## Codex (optional)
 
-Same skill body works at `~/.codex/skills/brainium/SKILL.md` for OpenAI Codex CLI — copy from `agents/claude/skills/brainium/SKILL.md`.
+The project skill body works at `~/.codex/skills/brainium/SKILL.md` for OpenAI Codex CLI — copy from `agents/claude/skills/brainium/SKILL.md`.
 
 ## Verify
 
-In Claude Code, run a substantive task and confirm the agent appends `docs/brainium/sessions/YYYY-MM-DD.md` without being asked.
+In Claude Code, run a substantive task and confirm the agent logs a session (`brain_log`, or `docs/brainium/sessions/YYYY-MM-DD.md` without the tools) without being asked.
 
 ## Promotion
 

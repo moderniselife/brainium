@@ -1,14 +1,14 @@
 ## Brainium (mandatory)
 
-This project uses **git-backed agent memory** under `docs/brainium/`. The user should **not** have to ask you to log work.
+This project keeps **git-backed agent memory** in `docs/brainium/` (the project brain). The user should **not** have to ask you to log work.
 
-**Before every substantive "done" reply:**
+Follow `.claude/skills/brainium/SKILL.md` (project skill):
 
-1. Read and follow `.claude/skills/brainium/SKILL.md` (project skill).
-2. Apply the incident and index rules in `core/POLICY.md` if present in the repo, else `docs/brainium/README.md`.
-3. Append today's session file, route failures/learnings, update `failures/README.md` and `learnings/README.md` for new slugs, commit when the team expects it.
-4. Tell the user once which paths you updated (`sessions/…`, `failures/…`, `learnings/…`).
+1. **Start of work:** `brain_pending` (file captured sessions), then `brain_search` when prior context could matter.
+2. **Before every substantive "done" reply:** `brain_log` a session; incidents as `failure` (+ `learning`); preferences as `memory`; agent instructions via `agent_card_save`. Working as a named agent? Pass `agent: "<your name>"` on every call.
+3. **Without the Brainium tools:** append today's `docs/brainium/sessions/YYYY-MM-DD.md`, route failures/learnings, update `failures/README.md` and `learnings/README.md` for new slugs, commit when the team expects it.
+4. Tell the user once which paths you updated.
 
-**Substantive** = code, docs, debugging, deploy, product direction, or non-trivial explanation. Pure acknowledgements: one line in today's session only.
+**Substantive** = code, docs, debugging, deploy, product direction, or non-trivial explanation. Pure acknowledgements: one line in today's session only. Never store secrets.
 
 When promoting repeat guardrails: document in `docs/brainium/rules/` or `skills/` and add the hook in `CLAUDE.md`, `.cursor/rules`, or another agent config as appropriate.

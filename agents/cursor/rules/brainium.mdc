@@ -1,35 +1,33 @@
 ---
-description: Mandatory Brainium — summarise conversations into docs/brainium; route detail to typed folders; complete incident capture.
+description: Mandatory Brainium — check and search the brain at the start of work, log every substantive conversation before done (brain_log, or docs/brainium files), complete incident capture.
 alwaysApply: true
 ---
 
 # Brainium — mandatory, no reminders needed
 
-Canonical policy: `core/POLICY.md` in the brainium package (or `docs/brainium/README.md` in your repo).
+Canonical policy: `docs/brainium/POLICY.md` (or `docs/brainium/README.md`). Full checklist: `.cursor/skills/brainium/SKILL.md`.
 
-The user does **not** need to ask you to log work. **You** capture every substantive conversation into git before you treat the task as finished.
+The user does **not** need to ask you to log work. **You** capture every substantive conversation before you treat the task as finished.
 
-## Folder tree
+## Start of work
 
-See `docs/brainium/README.md`. Each folder has `README.md` + `_template.md`.
+1. `brain_pending` — file any captured sessions (`brain_pending_get` → `brain_resolve`).
+2. `brain_search` for the task's key terms when prior context could matter.
 
-## Session file = calendar day (strict)
-
-- **`docs/brainium/sessions/YYYY-MM-DD.md`** = **calendar date** (local day unless project docs say otherwise), not “same chat until done.”
-- After midnight → **today’s** file. `00:xx` sections never go on yesterday’s log.
-- Confirm date before append; create file + `sessions/README.md` row for new days. Move misfiled sections to the correct date.
+Working as a named agent? Pass `agent: "<your name>"` on every Brainium call.
 
 ## Non-negotiable close-out
 
-1. **Session** — **`docs/brainium/sessions/YYYY-MM-DD.md` for today**; link every `failures/` and `learnings/` slug.
-2. **Route** — typed folders under `docs/brainium/`.
-3. **Index tables** — row in `failures/README.md` and/or `learnings/README.md` per new slug.
-4. **Commit** (push if project rules say so).
-5. **Tell the user once** which paths changed.
+1. **Session** — `brain_log` kind `session` (brain `auto` = this repo's `docs/brainium/`). Without the Brainium tools: `docs/brainium/sessions/YYYY-MM-DD.md` for **today's calendar date** (after midnight = new file + `sessions/README.md` row).
+2. **Route** — incidents → `failure` (+ `learning`); knowledge → `learning`; preferences → `memory`; also `question`, `improvement`, `decision`. Agent instructions → `agent_card_save`; scheduled work → `routine_save`.
+3. **Index tables** — without the tools, one row in `failures/README.md` and/or `learnings/README.md` per new slug, then commit (push if project rules say so).
+4. **Tell the user once** which paths changed.
+
+Never store secrets.
 
 ## Incidents
 
-Follow the incident table in `core/POLICY.md`. Add project-specific rows via another `.cursor/rules/*.mdc` or `extensions/`.
+Follow the incident table in `docs/brainium/POLICY.md`. Add project-specific rows via another `.cursor/rules/*.mdc` or `extensions/`.
 
 ## Promotion (Cursor)
 
@@ -37,7 +35,3 @@ Follow the incident table in `core/POLICY.md`. Add project-specific rows via ano
 |--------|--------|
 | Agent guard | `.cursor/rules/*.mdc` + `docs/brainium/rules/` |
 | Workflow | `.cursor/skills/*/SKILL.md` + `docs/brainium/skills/` |
-
-## Skill
-
-`.cursor/skills/brainium/SKILL.md`
