@@ -72,9 +72,14 @@ function recordPath(root, type, id) {
   return join(sharedRoot(root), RECORD_TYPES[type].folder, `${id}.md`);
 }
 
+/** Body text without fenced code blocks and `inline code`, where [[links]] are examples, not links. */
+function prose(body) {
+  return String(body).replace(/^(```|~~~)[\s\S]*?^\1/gm, "").replace(/`[^`\n]*`/g, "");
+}
+
 function linksOf(meta, body) {
   const out = new Set((Array.isArray(meta.links) ? meta.links : meta.links ? [meta.links] : []).map((l) => l.replace(/^\[\[|\]\]$/g, "")));
-  for (const m of String(body).matchAll(LINK)) out.add(`${m[1] || ""}${m[2]}/${m[3]}`);
+  for (const m of prose(body).matchAll(LINK)) out.add(`${m[1] || ""}${m[2]}/${m[3]}`);
   return [...out];
 }
 
