@@ -20,4 +20,4 @@ For each new or changed note:
 4. **Sign what you can.** An unsigned note whose author is clear from its content gets `agent:` (or `author:` for a person). Never guess.
 5. **Flag what's stale.** A live record untouched for a month, or past `review_by`: message its owner (`shared/messages/<owner>/inbox/`). Don't close it yourself.
 
-Rules: never delete content (merge, move or point instead). Never move a note into another team's area without saying why in its pointer. Sign everything `agent: librarian`. Finish with one session entry listing what you changed and what you left for a person, with paths.
+Rules: never delete content (merge, move or point instead). Never move a note into another team's area without saying why in its pointer. Sign everything `agent: librarian`. If the brain has a remote, commit each change as you go, then `git pull --rebase` and `git push` before you finish, so other agents and machines see it. Finish with one session entry listing what you changed and what you left for a person, with paths.
