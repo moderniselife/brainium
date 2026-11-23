@@ -30,6 +30,8 @@ mojo-layers/
 
 Refs name the brain: `mojo-layers:shared/decisions/2026-11-17-use-postgres.md`, `personal:memories/…`, `project:learnings/…`. Your older personal brain keeps its layout: its root acts as its shared area, and cards stay single files (`agents/<name>.md`).
 
+**Brains inside brains.** A brain can live in a folder of another (say one brain per team under a company brain's `teams/`). Register each one: a search of the outer brain then leaves the inner brains out, so team notes don't leak into company-wide searches. Search the team's brain, or every brain with `brain: "*"`, to see them.
+
 **Which brain a call uses:** the one it names (`brain`), else "auto": the project brain (`docs/brainium/`) when there is one, else the profile's brain, else personal. The profile's brain is `$BRAINIUM_BRAIN` on its MCP server, which `brainium wire --brain NAME` (and Prism) set per profile. Searches cover the project, profile and personal brains (`brain: "*"` for every brain).
 
 ## Agents
