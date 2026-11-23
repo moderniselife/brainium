@@ -202,11 +202,17 @@ function ownerOf(root, file) {
 // ---------------------------------------------------------------------------
 // Read side
 
-function walkMarkdown(root, out = []) {
+function realOrSelf(p) {
+  try { return realpathSync(p); } catch { return p; }
+}
+
+/** Markdown files under root. Folders in `skip` (other brains nested inside this one) are left out. */
+function walkMarkdown(root, out = [], skip = new Set()) {
   for (const entry of readdirSync(root, { withFileTypes: true })) {
     if (entry.name.startsWith(".") || entry.name.startsWith("_") || entry.name === "node_modules") continue;
     const p = join(root, entry.name);
-    if (entry.isDirectory()) walkMarkdown(p, out);
+    if (entry.isDirectory() && skip.has(realOrSelf(p))) continue;
+    if (entry.isDirectory()) walkMarkdown(p, out, skip);
     else if (entry.isFile() && entry.name.endsWith(".md")) out.push(p);
   }
   return out;
@@ -229,9 +235,13 @@ export function search(roots, query, { scope, brain, agent = "", everyone = fals
   if (terms.length === 0) throw new Error("query is empty");
   const me = agent ? slugify(agent) : "";
   const hits = [];
+  // A brain registered inside another (a team brain in a company brain's teams/ folder)
+  // is its own brain: searching the outer one doesn't include it.
+  const allRoots = Object.values(roots).filter(Boolean).map(realOrSelf);
   for (const b of searchBrains(roots, brain ?? scope, defaultBrain)) {
     const root = roots[b];
-    for (const file of walkMarkdown(root)) {
+    const nested = new Set(allRoots.filter((r) => r !== realOrSelf(root)));
+    for (const file of walkMarkdown(root, [], nested)) {
       const owner = ownerOf(root, file);
       if (owner && me && !everyone && owner.slug !== me && !owner.isCard) continue;
       const lines = readFileSync(file, "utf8").split("\n");

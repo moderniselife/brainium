@@ -212,3 +212,20 @@ test("wire --brain sets BRAINIUM_BRAIN on the MCP server and --brain on the capt
     assert.equal(existsSync(join(profile, "settings.json")) && JSON.parse(readFileSync(join(profile, "settings.json"), "utf8")).hooks, undefined);
   } finally { restore(); }
 });
+
+test("a brain registered inside another brain is left out of the outer brain's search", () => {
+  const { mojo, config, env, restore } = team();
+  try {
+    const qa = join(mojo, "teams", "qa");
+    initBrain(qa);
+    addBrain("mojo-qa", qa, env);
+    put(join(qa, "agents", "ali", "learnings", "flaky.md"), "# Flaky login\n\nretry the zebra step");
+    put(join(mojo, "shared", "memories", "co.md"), "# Company\n\nzebra policy for everyone");
+    const roots = brainRoots(loadConfig(env), "/nowhere");
+    const outer = search(roots, "zebra", { brain: "mojo-layers" }).map((h) => h.path);
+    assert.deepEqual(outer, ["mojo-layers:shared/memories/co.md"]);
+    const inner = search(roots, "zebra", { brain: "mojo-qa" }).map((h) => h.path);
+    assert.deepEqual(inner, ["mojo-qa:agents/ali/learnings/flaky.md"]);
+    assert.equal(search(roots, "zebra", { brain: "*" }).length, 2);
+  } finally { restore(); }
+});
