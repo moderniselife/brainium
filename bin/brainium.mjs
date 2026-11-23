@@ -45,6 +45,7 @@ Routines (scheduled prompts, upkeep jobs and shell commands in a brain's routine
   brainium routines run REF             Run one now (REF = brain/routine)
   brainium routines tick                Start whatever is due (the scheduler calls this)
   brainium scheduler install|uninstall|status
+                                        Run ticks every minute with launchd / systemd / Task Scheduler
   brainium preflight [--agent NAME] [--no-pull]  Before any work: fast-forward the repos .brainium.json lists
                                         and list rule files changed since this agent last looked
   brainium organize [--brain NAME] [--apply] [--agent NAME]
@@ -54,7 +55,6 @@ Routines (scheduled prompts, upkeep jobs and shell commands in a brain's routine
                                         Check for context rot; --write saves shared/health.md
   brainium record get FOLDER/ID [--brain NAME]
                                         A record plus what it links to and what links back
-                                        Run ticks every minute with launchd / systemd / Task Scheduler
 
 Apps:
   brainium wire --app APP [--profile DIR] [--brain NAME] [--system] [--capture]
