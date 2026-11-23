@@ -9,6 +9,7 @@ import { brainRoots } from "../lib/brain.mjs";
 import { addBrain, loadConfig, setConfig } from "../lib/config.mjs";
 import { lintBrain } from "../lib/records.mjs";
 import { organizeBrain, organizeReport, addFrontmatterField } from "../lib/organize.mjs";
+import { callTool } from "../lib/mcp.mjs";
 
 const git = (cwd, ...a) => execFileSync("git", a, { cwd, stdio: "pipe", encoding: "utf8" }).trim();
 
@@ -75,4 +76,15 @@ test("organize fixes what has one right answer and leaves the rest", () => {
 test("addFrontmatterField adds to existing frontmatter or creates it", () => {
   assert.equal(addFrontmatterField("---\na: 1\n---\nbody\n", "agent", "x"), "---\na: 1\nagent: x\n---\nbody\n");
   assert.equal(addFrontmatterField("# t\n", "author", "y"), "---\nauthor: y\n---\n\n# t\n");
+});
+
+test("brain_organize works through MCP, and maintained_by counts as signed", async () => {
+  const { mojo, restore, commit, env } = brain();
+  try {
+    put(join(mojo, "shared", "memories", "epic.md"), "---\nmaintained_by: tess\n---\n# Epic state\n");
+    commit("add epic");
+    assert.ok(!lintBrain(brainRoots(loadConfig(env), null), "mojo").issues.some((i) => i.path === "shared/memories/epic.md"));
+    const out = await callTool("brain_organize", { brain: "mojo" }, { env });
+    assert.match(out, /# Organize mojo \(dry run\)/);
+  } finally { restore(); }
 });
