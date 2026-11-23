@@ -10,6 +10,7 @@ import { loadConfig, resolvedSummarizer } from "./config.mjs";
 import { brainRoots, defaultBrainName, getAgentCard, listAgents, listFolder, logEntry, readEntry, saveAgentCard, search, shareEntry, KINDS } from "./brain.mjs";
 import { describe, listRoutines, loadApprovals, loadState, saveRoutine } from "./routines.mjs";
 import { getPending, listPending, resolvePending } from "./capture.mjs";
+import { getRecord, lintBrain, lintReport, RECORD_TYPES, saveRecord, writeHealth } from "./records.mjs";
 import { PKG_ROOT } from "./personal.mjs";
 
 const VERSION = JSON.parse(readFileSync(join(PKG_ROOT, "package.json"), "utf8")).version;
@@ -83,6 +84,9 @@ export const TOOLS = [
     inputSchema: {
       type: "object",
       properties: {
+        kind: { type: "string", enum: ["personal", "factory"], description: "factory: a shared agent many people rely on; keep its prompt versions in prompts/ (one production) and test cases in evals/" },
+        team: str("The team it belongs to"),
+        maintainers: { type: "array", items: { type: "string" }, description: "Who may change a factory's prompt" },
         name: str("Agent name"), apps: str("Where it lives, e.g. 'Grok Bot, Claude Code'"), tldr: str("What it is for"),
         instructions: str("Its instructions / system prompt, verbatim"), tools: str("Tools and connectors by name"),
         knowledge: str("Brain links it depends on"), recreate: str("Steps to rebuild it"), template_link: str("Grok Bot template share link"),
@@ -103,13 +107,16 @@ export const TOOLS = [
   },
   {
     name: "routine_save",
-    description: "Create or replace a routine (routines/<name>.md). It's saved disabled and unapproved: the user turns it on and approves it on their machine (Prism → Second brain → Routines). type prompt runs `body` as a prompt through Claude Code or Codex; shell runs `body` as a command; upkeep runs a built-in job (sync, distill, digest).",
+    description: "Create or replace a routine (routines/<name>.md). It's saved disabled and unapproved: the user turns it on and approves it on their machine (Prism → Second brain → Routines). It runs on a schedule, when files matching `on` change, or both. type prompt runs `body` as a prompt through Claude Code or Codex; shell runs `body` as a command; upkeep runs a built-in job (sync, distill, digest, lint). New prompt/shell routines start at stage shadow (propose only); the user moves them to limited, then full.",
     inputSchema: {
       type: "object",
       properties: {
         name: str("Routine name"),
         brain: str("Which brain (default: this profile's brain)"),
-        schedule: str('Cron "0 8 * * 1-5" (local time), @daily/@hourly/@weekly, or "every 30m"'),
+        schedule: str('Cron "0 8 * * 1-5" (local time), @daily/@hourly/@weekly, or "every 30m". Optional when `on` is given'),
+        on: str('Run when brain files matching these globs change, comma-separated, e.g. "shared/messages/*/inbox/**"'),
+        stage: { type: "string", enum: ["shadow", "limited", "full"], description: "shadow: propose only; limited: act on at most `limit` items; full. Default shadow for prompt/shell" },
+        limit: { type: "number", description: "stage limited: most items per run (default 3)" },
         type: { type: "string", enum: ["prompt", "upkeep", "shell"] },
         agent: str("The agent it runs as; its log goes to that agent's sessions"),
         app: { type: "string", enum: ["claude-code", "codex"] },
@@ -117,11 +124,39 @@ export const TOOLS = [
         cwd: str("Working folder"),
         args: str("Extra CLI arguments, e.g. --permission-mode acceptEdits"),
         timeout: str('Time limit, e.g. "20m"'),
-        job: { type: "string", enum: ["sync", "distill", "digest"] },
+        job: { type: "string", enum: ["sync", "distill", "digest", "lint"] },
         body: str("The prompt (type prompt) or command (type shell)"),
       },
-      required: ["name", "schedule", "type"],
+      required: ["name", "type"],
     },
+  },
+  {
+    name: "record_save",
+    description: "Create or update a record: one of the things work is about (project, person, team, customer, meeting, document), kept once in the brain's shared area and linked to other records with [[type/id]]. Fields merge into what's there; the body is replaced only if given; links are added. Prefer updating the record over writing a new note about the same thing. Never include secrets.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        type: { type: "string", enum: Object.keys(RECORD_TYPES) },
+        id: str("Short stable id, e.g. onboarding-m2 (default: from the title)"),
+        title: str("Display title"),
+        fields: { type: "object", description: "Frontmatter fields, e.g. { status: \"active\", owner: \"ops\", team: \"qa\", review_by: \"2026-12-31\" }. project needs status+owner, person role, customer status, meeting date, document status" },
+        links: { type: "array", items: { type: "string" }, description: 'Records this one relates to: "person/sam", "project/launch", or "other-brain:project/x"' },
+        body: str("Markdown body (replaces the old body)"),
+        brain: str("Which brain (default auto)"),
+        agent: str("Your agent name (recorded as who last updated it)"),
+      },
+      required: ["type"],
+    },
+  },
+  {
+    name: "record_get",
+    description: "Read a record and everything one hop away: the records it links to (title, status, or missing) and the notes and records that link back to it. Use this before searching when you know the project, person, customer or meeting.",
+    inputSchema: { type: "object", properties: { ref: str('type/id, e.g. "project/launch" or "team-brain:customer/acme"'), brain: str("Which brain (default auto)") }, required: ["ref"] },
+  },
+  {
+    name: "brain_lint",
+    description: "Check a brain for context rot: unsigned notes in the shared area, records missing required fields, broken [[links]], stale records (live status but untouched for 30 days, or past review_by), misfiled records, and factory agents without one production prompt and some evals. write: true also saves the report as shared/health.md.",
+    inputSchema: { type: "object", properties: { brain: str("Which brain (default auto)"), stale_days: { type: "number" }, write: { type: "boolean" } } },
   },
   {
     name: "brain_pending",
@@ -194,6 +229,23 @@ export async function callTool(name, args = {}, { cwd = process.cwd(), env = pro
     case "routine_save": {
       const r = saveRoutine(config, { ...args, brain: args.brain || (defaultBrain === "project" ? "personal" : defaultBrain) });
       return `Saved ${r.ref} (${r.file}). It's off until the user turns it on and approves it on their machine.`;
+    }
+    case "record_save": {
+      const r = saveRecord(roots(), config, { type: args.type, id: args.id, title: args.title, fields: args.fields || {}, links: args.links || [], body: args.body, brain: which || "auto", agent: who, defaultBrain });
+      return `${r.created ? "Created" : "Updated"} ${r.path} (git: ${r.commit})${r.missing.length ? ` — still missing: ${r.missing.join(", ")}` : ""}.`;
+    }
+    case "record_get":
+      return json(getRecord(roots(), args.ref, { brain: which || "auto", defaultBrain }));
+    case "brain_lint": {
+      const rs = roots();
+      const { pickBrain } = await import("./brain.mjs");
+      const name = pickBrain(rs, which || "auto", defaultBrain);
+      const opts = { staleDays: args.stale_days || 30 };
+      if (args.write) {
+        const h = writeHealth(config, name, opts);
+        return lintReport(h) + `\n\nSaved to ${h.path} (git: ${h.commit}).`;
+      }
+      return lintReport(lintBrain(rs, name, opts));
     }
     case "brain_pending": {
       const items = listPending(config).map(({ id, topic, cwd: c, endedAt, projectBrain, attempts, lastError }) =>

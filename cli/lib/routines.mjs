@@ -15,7 +15,7 @@ import { spawn, execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, readSync, rmSync, statSync, writeSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, dirname, join, resolve } from "node:path";
+import { delimiter, dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { configPath } from "./config.mjs";
 import { brainRoots, listAgentsIn, logEntry, sharedRoot } from "./brain.mjs";
@@ -25,7 +25,8 @@ import { commitPaths, findRepoRoot, remoteUrl } from "./git.mjs";
 
 export const TYPES = ["prompt", "upkeep", "shell"];
 export const APPS = ["claude-code", "codex"];
-export const JOBS = ["sync", "distill", "digest"];
+export const JOBS = ["sync", "distill", "digest", "lint"];
+export const STAGES = ["shadow", "limited", "full"];
 
 // ---------------------------------------------------------------------------
 // File format
@@ -204,6 +205,47 @@ export function nextRun(schedule, after, anchor = after) {
 const expandHome = (p) => (p && String(p).startsWith("~") ? join(homedir(), String(p).slice(1)) : p);
 
 /** Every routine in every brain (project brains have none). */
+// A glob (for example shared/messages/<any>/inbox/<anything>, written with * and **) as a regex over brain-relative paths.
+export function globToRegex(glob) {
+  let re = "";
+  const g = String(glob).trim().replace(/^\.?\//, "");
+  for (let i = 0; i < g.length; i++) {
+    const c = g[i];
+    if (c === "*" && g[i + 1] === "*") {
+      re += g[i + 2] === "/" ? "(?:.*/)?" : ".*";
+      i += g[i + 2] === "/" ? 2 : 1;
+    } else if (c === "*") re += "[^/]*";
+    else if (c === "?") re += "[^/]";
+    else re += c.replace(/[.+^${}()|[\]\\]/g, "\\$&");
+  }
+  return new RegExp(`^${re}$`);
+}
+
+/** Brain files matching any of `globs` modified after `since` (ms). Newest mtime too. */
+export function changedFiles(root, globs, since) {
+  const res = globs.map(globToRegex);
+  const out = [];
+  let newest = 0;
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (e.name === ".git" || e.name === "node_modules") continue;
+      const p = join(dir, e.name);
+      if (e.isDirectory()) walk(p);
+      else if (e.isFile()) {
+        const rel = relative(root, p).split(/[\\/]/).join("/");
+        if (!res.some((r) => r.test(rel))) continue;
+        const m = statSync(p).mtimeMs;
+        if (m > since) {
+          out.push(rel);
+          newest = Math.max(newest, m);
+        }
+      }
+    }
+  };
+  if (existsSync(root)) walk(root);
+  return { files: out.sort(), newest };
+}
+
 export function listRoutines(config, { brain } = {}) {
   const roots = brainRoots(config, null);
   const names = brain ? [brain].filter((b) => roots[b]) : Object.keys(roots);
@@ -227,11 +269,16 @@ function loadRoutine(brain, root, file) {
   const type = String(meta.type || "prompt").toLowerCase();
   if (!TYPES.includes(type)) errors.push(`type must be ${TYPES.join(", ")}`);
   let schedule = null;
-  try {
-    schedule = parseSchedule(meta.schedule);
-  } catch (e) {
-    errors.push(`schedule: ${e.message}`);
+  const on = String(meta.on || "").split(",").map((s) => s.trim()).filter(Boolean);
+  if (meta.schedule || !on.length) {
+    try {
+      schedule = parseSchedule(meta.schedule);
+    } catch (e) {
+      errors.push(`schedule: ${e.message}${on.length ? "" : " (or give it on: <paths> to run when files change)"}`);
+    }
   }
+  const stage = String(meta.stage || "full").toLowerCase();
+  if (!STAGES.includes(stage)) errors.push(`stage must be ${STAGES.join(", ")}`);
   const app = String(meta.app || "claude-code").toLowerCase();
   if (type === "prompt" && !APPS.includes(app)) errors.push(`app must be ${APPS.join(" or ")}`);
   const job = String(meta.job || "").toLowerCase();
@@ -247,6 +294,10 @@ function loadRoutine(brain, root, file) {
     type,
     schedule,
     scheduleText: String(meta.schedule || ""),
+    on,
+    debounceMs: parseDuration(meta.debounce, MINUTE),
+    stage,
+    limit: Number(meta.limit) > 0 ? Number(meta.limit) : 3,
     agent: meta.agent ? String(meta.agent) : "",
     app,
     profile: meta.profile ? resolve(expandHome(String(meta.profile))) : "",
@@ -352,6 +403,8 @@ export function describe(r, state = {}, approvals = {}, now = new Date()) {
     file: r.file,
     type: r.type,
     schedule: r.scheduleText,
+    on: r.on.length ? r.on : null,
+    stage: r.stage,
     agent: r.agent || null,
     app: r.type === "prompt" ? r.app : null,
     profile: r.profile || null,
@@ -396,12 +449,30 @@ export function tick(config, { now = new Date(), env = process.env, start = star
   const approvals = loadApprovals(env);
   const actions = [];
   for (const r of listRoutines(config)) {
-    if (r.errors.length || !r.enabled || !isApproved(r, approvals) || !r.schedule) continue;
+    if (r.errors.length || !r.enabled || !isApproved(r, approvals) || (!r.schedule && !r.on.length)) continue;
     const s = state[r.ref] || {};
     if (!s.firstSeen) {
-      // Never run the moment a routine appears (or is approved): wait for its next slot.
-      updateState(r.ref, { firstSeen: now.toISOString() }, env);
+      // Never run the moment a routine appears (or is approved): wait for its next slot,
+      // or for files to change after this moment.
+      updateState(r.ref, { firstSeen: now.toISOString(), lastEventScan: now.toISOString() }, env);
       continue;
+    }
+    if (r.on.length) {
+      // Event trigger: matching files changed since the last scan, and the burst
+      // has settled (nothing newer than the debounce window).
+      const since = +new Date(s.lastEventScan || s.firstSeen);
+      const { files, newest } = changedFiles(r.brainRoot, r.on, since);
+      if (files.length && +now - newest >= r.debounceMs) {
+        if (s.running && pidAlive(s.running.pid)) {
+          actions.push({ ref: r.ref, action: "still-running" });
+        } else {
+          updateState(r.ref, { lastEventScan: new Date(newest).toISOString(), pendingChanges: files.slice(0, 200) }, env);
+          start(r.ref, null);
+          actions.push({ ref: r.ref, action: "started", trigger: "change", files: files.length });
+          continue;
+        }
+      }
+      if (!r.schedule) continue;
     }
     const since = new Date(Math.max(+new Date(s.firstSeen), s.lastScheduled ? +new Date(s.lastScheduled) : 0));
     const due = latestDue(r.schedule, now, since, new Date(s.firstSeen));
@@ -568,7 +639,9 @@ export async function runRoutine(config, ref, { scheduledFor = null, force = fal
     const exec = { prompt: execPrompt, shell: execShell, upkeep: execUpkeep, ...executors }[r.type];
     let result;
     try {
-      result = await exec(r, config, { env, since: before.lastRun ? new Date(before.lastRun) : null, now: started });
+      const changes = Array.isArray(before.pendingChanges) ? before.pendingChanges : [];
+      if (changes.length) updateState(r.ref, { pendingChanges: null }, env);
+      result = await exec(r, config, { env, since: before.lastRun ? new Date(before.lastRun) : null, now: started, changes });
     } catch (e) {
       result = { exit: -1, output: e.message, timedOut: false };
     }
@@ -586,7 +659,7 @@ export async function runRoutine(config, ref, { scheduledFor = null, force = fal
     try {
       const roots = brainRoots(config, null);
       const body = [
-        `**${status === "ok" ? "Ran" : status === "failed" ? "Failed" : "Timed out"}** — ${r.type}${r.type === "prompt" ? ` via ${r.app}` : r.type === "upkeep" ? ` (${r.job})` : ""}, ${Math.round(durationMs / 1000)}s${result.exit !== 0 && !result.timedOut ? `, exit ${result.exit}` : ""}.`,
+        `**${status === "ok" ? "Ran" : status === "failed" ? "Failed" : "Timed out"}** — ${r.type}${r.type === "prompt" ? ` via ${r.app}` : r.type === "upkeep" ? ` (${r.job})` : ""}, ${Math.round(durationMs / 1000)}s${result.exit !== 0 && !result.timedOut ? `, exit ${result.exit}` : ""}${r.stage !== "full" && r.type !== "upkeep" ? `, stage ${r.stage}${r.stage === "limited" ? ` (limit ${r.limit})` : ""}` : ""}${scheduledFor ? "" : r.on.length ? ", triggered by file changes" : ""}.`,
         tail ? `\n**Output**${output.length > tail.length ? " (last lines; full log on the machine that ran it)" : ""}\n\n\`\`\`text\n${tail.replace(/```/g, "ʼʼʼ")}\n\`\`\`` : "",
       ].join("\n");
       logged = logEntry(roots, config, { kind: "session", title: `Routine: ${r.name}`, body, brain: r.brain, agent: r.agent, source: "routine", now: ended }).path;
@@ -609,27 +682,39 @@ export async function runRoutine(config, ref, { scheduledFor = null, force = fal
   }
 }
 
-function routineEnv(r, env, extra = {}) {
+function routineEnv(r, env, extra = {}, changes = []) {
   return {
     ...env,
     PATH: richPath(env),
     BRAINIUM_BRAIN: r.brain,
     ...(r.agent ? { BRAINIUM_AGENT: r.agent } : {}),
     BRAINIUM_ROUTINE: r.ref,
+    BRAINIUM_STAGE: r.stage,
+    BRAINIUM_LIMIT: String(r.limit),
+    ...(changes.length ? { BRAINIUM_CHANGED: changes.join("\n") } : {}),
     ...extra,
   };
 }
 
-async function execPrompt(r, config, { env }) {
+/** What a prompt routine is told about its stage (shadow, limited) and what triggered it. */
+export function stagePreface(r, changes = []) {
+  const parts = [];
+  if (r.stage === "shadow") parts.push("SHADOW RUN: don't change anything outside this brain and don't contact anyone. Work out what you would do, and log it as a proposal (brain_log kind improvement, title starting \"Shadow:\") for a human to review.");
+  if (r.stage === "limited") parts.push(`LIMITED RUN: act on at most ${r.limit} item(s) this run. Log what you did and list what's left for a later run.`);
+  if (changes.length) parts.push(`Triggered by changes to: ${changes.slice(0, 50).join(", ")}${changes.length > 50 ? ` (and ${changes.length - 50} more)` : ""}.`);
+  return parts.length ? parts.join("\n") + "\n\n" : "";
+}
+
+async function execPrompt(r, config, { env, changes = [] }) {
   const preface = `[Brainium routine "${r.name}"${r.agent ? ` · you are the agent "${r.agent}"` : ""} · brain "${r.brain}". `
     + `Pass brain: "${r.brain}"${r.agent ? ` and agent: "${r.agent}"` : ""} on every Brainium call. No one is watching this run: don't ask questions, do the work and log what matters.]\n\n`;
-  const prompt = preface + r.body;
+  const prompt = preface + stagePreface(r, changes) + r.body;
   const cwd = r.cwd || r.brainRoot;
   if (r.app === "codex") {
     const bin = findTool("codex", config.routines?.codexPath, env);
     if (!bin) throw new Error("Codex's CLI (codex) isn't installed on this machine. Install it, or point Brainium at it: brainium config set routines.codexPath /path/to/codex");
     const extra = r.profile ? { CODEX_HOME: r.profile } : {};
-    return runProcess(bin, ["exec", ...splitArgs(r.args), prompt], { cwd, env: routineEnv(r, env, extra), timeoutMs: r.timeoutMs });
+    return runProcess(bin, ["exec", ...splitArgs(r.args), prompt], { cwd, env: routineEnv(r, env, extra, changes), timeoutMs: r.timeoutMs });
   }
   const bin = findTool("claude", config.routines?.claudePath, env);
   if (!bin) throw new Error("Claude Code's CLI (claude) isn't installed on this machine. Install it (https://docs.claude.com/en/docs/claude-code/setup), or point Brainium at it: brainium config set routines.claudePath /path/to/claude");
@@ -637,22 +722,31 @@ async function execPrompt(r, config, { env }) {
   // opening Claude Code normally (setting it would move its state file).
   const isDefault = !r.profile || resolve(r.profile) === resolve(join(homedir(), ".claude"));
   const extra = isDefault ? {} : { CLAUDE_CONFIG_DIR: r.profile };
-  const childEnv = routineEnv(r, env, extra);
+  const childEnv = routineEnv(r, env, extra, changes);
   if (isDefault) delete childEnv.CLAUDE_CONFIG_DIR;
   return runProcess(bin, ["-p", prompt, ...splitArgs(r.args)], { cwd, env: childEnv, timeoutMs: r.timeoutMs });
 }
 
-async function execShell(r, config, { env }) {
+async function execShell(r, config, { env, changes = [] }) {
   const cwd = r.cwd || r.brainRoot;
+  // Shell routines read BRAINIUM_STAGE / BRAINIUM_LIMIT / BRAINIUM_CHANGED and decide what that means.
   if (process.platform === "win32") {
-    return runProcess("cmd.exe", ["/d", "/s", "/c", r.body], { cwd, env: routineEnv(r, env), timeoutMs: r.timeoutMs });
+    return runProcess("cmd.exe", ["/d", "/s", "/c", r.body], { cwd, env: routineEnv(r, env, {}, changes), timeoutMs: r.timeoutMs });
   }
   const shell = env.SHELL && existsSync(env.SHELL) ? env.SHELL : "/bin/sh";
-  return runProcess(shell, ["-lc", r.body], { cwd, env: routineEnv(r, env), timeoutMs: r.timeoutMs });
+  return runProcess(shell, ["-lc", r.body], { cwd, env: routineEnv(r, env, {}, changes), timeoutMs: r.timeoutMs });
 }
 
 async function execUpkeep(r, config, { env, since, now }) {
   if (r.job === "sync") return syncBrain(r.brainRoot, env, r.timeoutMs);
+  if (r.job === "lint") {
+    const { writeHealth } = await import("./records.mjs");
+    const h = writeHealth(config, r.brain, { now });
+    const counts = {};
+    for (const i of h.issues) counts[i.kind] = (counts[i.kind] || 0) + 1;
+    const summary = Object.entries(counts).map(([k, n]) => `${k}: ${n}`).join(", ");
+    return { exit: 0, output: `${h.records} records, ${h.checked} shared files checked. ${h.issues.length ? summary : "No issues."}\nReport: ${h.path}`, timedOut: false };
+  }
   if (r.job === "distill") {
     const { distill } = await import("./capture.mjs");
     const results = await distill(config, {});
@@ -745,16 +839,25 @@ export function setEnabled(config, ref, enabled) {
  * Create or replace a routine from fields (the MCP tool). Always saved
  * disabled: the user turns it on, and approves it, on their machine.
  */
-export function saveRoutine(config, { brain, name, schedule, type = "prompt", agent = "", app = "", profile = "", cwd = "", args = "", timeout = "", job = "", body = "" }) {
+export function saveRoutine(config, { brain, name, schedule = "", on = "", stage = "", limit = "", type = "prompt", agent = "", app = "", profile = "", cwd = "", args = "", timeout = "", job = "", body = "" }) {
   const roots = brainRoots(config, null);
   if (!brain || !roots[brain] || brain === "project") throw new Error(`no brain called "${brain}"`);
   if (!name || !String(name).trim()) throw new Error("name is required");
   if (!TYPES.includes(type)) throw new Error(`type must be ${TYPES.join(", ")}`);
-  parseSchedule(schedule); // throws with a clear message
+  const watch = (Array.isArray(on) ? on : String(on || "").split(",")).map((s) => String(s).trim()).filter(Boolean);
+  if (schedule || !watch.length) parseSchedule(schedule); // throws with a clear message
+  // New prompt and shell routines start in shadow: they propose, a human promotes them (limited, then full).
+  const st = String(stage || (type === "upkeep" ? "full" : "shadow")).toLowerCase();
+  if (!STAGES.includes(st)) throw new Error(`stage must be ${STAGES.join(", ")}`);
   if (type === "upkeep" && !JOBS.includes(job)) throw new Error(`job must be ${JOBS.join(", ")}`);
   if (type !== "upkeep" && !String(body).trim()) throw new Error(type === "shell" ? "body (the command) is required" : "body (the prompt) is required");
   const q = (v) => (/^[\w ./~@:+-]*$/.test(String(v)) && !/^\s|\s$/.test(String(v)) ? String(v) : JSON.stringify(String(v)));
-  const lines = ["---", `name: ${q(String(name).trim())}`, `schedule: ${JSON.stringify(String(schedule).trim())}`, `type: ${type}`];
+  const lines = ["---", `name: ${q(String(name).trim())}`];
+  if (schedule) lines.push(`schedule: ${JSON.stringify(String(schedule).trim())}`);
+  if (watch.length) lines.push(`on: ${JSON.stringify(watch.join(", "))}`);
+  lines.push(`type: ${type}`);
+  if (type !== "upkeep") lines.push(`stage: ${st}`);
+  if (st === "limited" && Number(limit) > 0) lines.push(`limit: ${Number(limit)}`);
   if (agent) lines.push(`agent: ${q(agent)}`);
   if (type === "prompt") lines.push(`app: ${app || "claude-code"}`);
   if (profile) lines.push(`profile: ${q(profile)}`);

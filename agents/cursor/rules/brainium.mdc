@@ -19,7 +19,7 @@ Working as a named agent? Pass `agent: "<your name>"` on every Brainium call.
 ## Non-negotiable close-out
 
 1. **Session** — `brain_log` kind `session` (brain `auto` = this repo's `docs/brainium/`). Without the Brainium tools: `docs/brainium/sessions/YYYY-MM-DD.md` for **today's calendar date** (after midnight = new file + `sessions/README.md` row).
-2. **Route** — incidents → `failure` (+ `learning`); knowledge → `learning`; preferences → `memory`; also `question`, `improvement`, `decision`. Agent instructions → `agent_card_save`; scheduled work → `routine_save`.
+2. **Route** — incidents → `failure` (+ `learning`); knowledge → `learning`; preferences → `memory`; also `question`, `improvement`, `decision`. Projects, people, customers, meetings, documents → records (`record_save` / `record_get`). Agent instructions → `agent_card_save`; scheduled or file-triggered work → `routine_save`.
 3. **Index tables** — without the tools, one row in `failures/README.md` and/or `learnings/README.md` per new slug, then commit (push if project rules say so).
 4. **Tell the user once** which paths changed.
 

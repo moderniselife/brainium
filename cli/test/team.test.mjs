@@ -176,7 +176,8 @@ test("MCP: $BRAINIUM_BRAIN picks the profile's brain, $BRAINIUM_AGENT names the 
     assert.match(saved, /mojo-layers\/nightly-sync/);
     assert.match(readFileSync(join(mojo, "routines", "nightly-sync.md"), "utf8"), /enabled: false/);
     const routines = JSON.parse(await callTool("routine_list", {}, ctx));
-    assert.equal(routines[0].ref, "mojo-layers/nightly-sync");
+    assert.ok(routines.some((r) => r.ref === "mojo-layers/nightly-sync"));
+    assert.ok(routines.some((r) => r.ref === "mojo-layers/brain-health" && r.enabled), "every brain comes with a weekly health check");
     await assert.rejects(callTool("routine_save", { name: "Bad", schedule: "whenever", type: "shell", body: "ls" }, ctx), /isn't a schedule/);
   } finally { restore(); }
 });

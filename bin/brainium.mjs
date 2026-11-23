@@ -37,12 +37,18 @@ Brains (one per team, Prism group, profile or project — besides personal):
 Routines (scheduled prompts, upkeep jobs and shell commands in a brain's routines/):
   brainium routines [--brain NAME]      List with next/last run and approval
   brainium routines new NAME --brain B [--type prompt|upkeep|shell] [--agent A] [--profile DIR] [--app claude-code|codex]
+                                        (routines run on schedule:, on: <globs> when files change, or both;
+                                         stage: shadow|limited|full controls how much they may do)
   brainium routines approve REF|--all   Allow a prompt/shell routine to run on this machine
   brainium routines revoke REF
   brainium routines enable|disable REF
   brainium routines run REF             Run one now (REF = brain/routine)
   brainium routines tick                Start whatever is due (the scheduler calls this)
   brainium scheduler install|uninstall|status
+  brainium lint [--brain NAME] [--write] [--stale-days N]
+                                        Check for context rot; --write saves shared/health.md
+  brainium record get TYPE/ID [--brain NAME]
+                                        A record plus what it links to and what links back
                                         Run ticks every minute with launchd / systemd / Task Scheduler
 
 Apps:
@@ -245,7 +251,7 @@ async function main() {
         const value = listRoutines(config, { brain: typeof args.brain === "string" ? args.brain : undefined }).map((r) => describe(r, state, approvals));
         const when = (iso) => (iso ? new Date(iso).toLocaleString() : "—");
         print(args, value, (v) => (v.length ? v.map((r) => [
-          `${r.ref}  ${r.name}  [${r.type}${r.agent ? ` · ${r.agent}` : ""}]  ${r.schedule}`,
+          `${r.ref}  ${r.name}  [${r.type}${r.agent ? ` · ${r.agent}` : ""}${r.stage && r.stage !== "full" && r.type !== "upkeep" ? ` · ${r.stage}` : ""}]  ${[r.schedule, r.on ? `on ${r.on.join(", ")}` : ""].filter(Boolean).join(" · ")}`,
           r.errors.length ? `    problem: ${r.errors.join("; ")}`
             : !r.enabled ? "    off"
             : !r.approved ? `    needs approval${r.changedSinceApproval ? " (changed since approved)" : ""}: brainium routines approve ${r.ref}`
@@ -280,6 +286,27 @@ async function main() {
       } else {
         throw new Error(`unknown routines command "${sub}"`);
       }
+      return;
+    }
+
+    case "lint": {
+      const { lintBrain, lintReport, writeHealth } = await import("../cli/lib/records.mjs");
+      const { brainRoots, pickBrain, defaultBrainName } = await import("../cli/lib/brain.mjs");
+      const roots = brainRoots(config, process.cwd());
+      const name = pickBrain(roots, typeof args.brain === "string" ? args.brain : "auto", defaultBrainName(config));
+      const opts = { staleDays: Number(args["stale-days"]) || 30 };
+      const r = args.write ? writeHealth(config, name, opts) : lintBrain(roots, name, opts);
+      print(args, r, (v) => lintReport(v) + (v.path ? `\nSaved to ${v.path}` : ""));
+      return;
+    }
+
+    case "record": {
+      const [sub, ref] = rest;
+      if (sub !== "get" || !ref) throw new Error("usage: brainium record get TYPE/ID [--brain NAME]");
+      const { getRecord } = await import("../cli/lib/records.mjs");
+      const { brainRoots, defaultBrainName } = await import("../cli/lib/brain.mjs");
+      const r = getRecord(brainRoots(config, process.cwd()), ref, { brain: typeof args.brain === "string" ? args.brain : "auto", defaultBrain: defaultBrainName(config) });
+      print(args, r, (v) => [`${v.ref}  (${v.path})`, "", ...Object.entries(v.meta).map(([k, x]) => `${k}: ${Array.isArray(x) ? x.join(", ") : x}`), "", "Links:", ...(v.links.length ? v.links.map((l) => `  ${l.ref}${l.missing ? "  (missing)" : `  ${l.title || ""}${l.status ? ` [${l.status}]` : ""}`}`) : ["  none"]), "Linked from:", ...(v.backlinks.length ? v.backlinks.map((b) => `  ${b}`) : ["  none"])].join("\n"));
       return;
     }
 

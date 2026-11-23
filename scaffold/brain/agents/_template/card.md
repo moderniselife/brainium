@@ -1,3 +1,9 @@
+---
+kind: personal
+team: 
+maintainers: []
+---
+
 # Agent: Name
 
 ## TLDR
@@ -26,6 +32,10 @@ Links into this brain or project brains the agent depends on.
 ## Recreate
 
 1. Steps to rebuild this agent on a fresh account or another app.
+
+## Factory
+
+For `kind: factory` (a shared agent many people use): `prompts/` holds its versions (one production), `evals/` its test cases, and `maintainers` who may change it. `brainium lint` checks both.
 
 ## Changelog
 

@@ -67,11 +67,11 @@ test("listing finds routines per brain and reports problems", () => {
     put(join(mojo, "routines", "bad.md"), "---\nname: Bad\nschedule: soon\ntype: launch\n---\n");
     newRoutine(config(), { brain: "mojo", name: "Brief" });
     const rs = listRoutines(config());
-    assert.deepEqual(rs.map((r) => r.ref), ["mojo/bad", "mojo/brief"]); // README and _template are skipped
+    assert.deepEqual(rs.map((r) => r.ref), ["mojo/bad", "mojo/brain-health", "mojo/brief"]); // README and _template are skipped; brain-health comes with every brain
     assert.match(rs[0].errors.join(" "), /type must be/);
     assert.match(rs[0].errors.join(" "), /schedule:/);
-    assert.equal(rs[1].enabled, false);
-    assert.equal(rs[1].type, "prompt");
+    assert.equal(rs[2].enabled, false);
+    assert.equal(rs[2].type, "prompt");
     assert.throws(() => newRoutine(config(), { brain: "mojo", name: "Brief" }), /already exists/);
     newRoutine(config(), { brain: "mojo", name: "Night watch", agent: "Ops", profile: "/Users/joe/.claude_code_profiles/Mojo Layers" });
     const nw = listRoutines(config()).find((r) => r.slug === "night-watch");
@@ -85,16 +85,16 @@ test("approval is per machine, tied to the content, and survives switching on an
   const { mojo, env, config, restore } = team();
   try {
     saveRoutine(config(), { brain: "mojo", name: "Echo", schedule: "every 5m", type: "shell", body: "echo hi" });
-    const before = describe(listRoutines(config())[0], loadState(env), loadApprovals(env));
+    const before = describe(listRoutines(config()).find((r) => r.slug === "echo"), loadState(env), loadApprovals(env));
     assert.equal(before.approved, false);
     assert.equal(before.needsApproval, true);
     approveRoutine(config(), "mojo/echo", env);
     setEnabled(config(), "mojo/echo", true);
-    const after = describe(listRoutines(config())[0], loadState(env), loadApprovals(env));
+    const after = describe(listRoutines(config()).find((r) => r.slug === "echo"), loadState(env), loadApprovals(env));
     assert.equal(after.enabled, true);
     assert.equal(after.approved, true, "enabling doesn't need re-approval");
     writeFileSync(join(mojo, "routines", "echo.md"), readFileSync(join(mojo, "routines", "echo.md"), "utf8").replace("echo hi", "rm -rf /tmp/x"));
-    const edited = describe(listRoutines(config())[0], loadState(env), loadApprovals(env));
+    const edited = describe(listRoutines(config()).find((r) => r.slug === "echo"), loadState(env), loadApprovals(env));
     assert.equal(edited.approved, false);
     assert.equal(edited.changedSinceApproval, true);
     // upkeep needs no approval
@@ -152,7 +152,7 @@ test("run: shell output is redacted, logged to the agent and kept raw on this ma
     assert.doesNotMatch(r.output, /sk-ant-api03/);
     assert.match(r.log, /^mojo:agents\/ops\/sessions\//);
     const day = readFileSync(join(mojo, "agents", "ops", "sessions", r.log.split("/").pop()), "utf8");
-    assert.match(day, /Routine: Report _\(routine\)_/);
+    assert.match(day, /Routine: Report _\(routine, agent: Ops\)_/);
     assert.ok(r.rawLog.startsWith(raw) && existsSync(r.rawLog));
     assert.equal(loadState(env)["mojo/report"].lastStatus, "ok");
 
