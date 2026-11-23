@@ -88,6 +88,22 @@ test("record links are written in folder form as Obsidian wikilinks, and every f
   } finally { restore(); }
 });
 
+test("lint resolves non-record links the way Obsidian does, including from a team brain into its company brain", () => {
+  const { mojo, config, restore } = team();
+  try {
+    const qa = join(mojo, "teams/qa");
+    initBrain(qa);
+    addBrain("mojo-qa", qa, process.env);
+    put(join(qa, "agents/tess/card.md"), "---\nagent: tess\n---\n# Tess\n");
+    put(join(mojo, "shared/people/sam.md"), "---\ntype: person\nrole: PM\nagent: ops\n---\n# Sam\n");
+    put(join(qa, "shared/learnings/2026-01-01-a.md"), "---\nagent: tess\nlinks: [\"[[tess/card]]\", \"[[people/sam]]\"]\n---\n# a\n\nSee [[tess/card|Tess]] and [[nobody/card]] and [[people/ghost]].\n");
+    const issues = lintBrain(brainRoots(config(), null), "mojo-qa").issues.filter((i) => i.kind === "broken-link").map((i) => i.detail);
+    assert.deepEqual(issues.sort(), ["[[nobody/card]] matches no file", "[[people/ghost]] doesn't exist"]);
+    const company = lintBrain(brainRoots(config(), null), "mojo").issues.filter((i) => i.kind === "broken-link");
+    assert.deepEqual(company, []);
+  } finally { restore(); }
+});
+
 test("lint finds unsigned notes, missing fields, broken links, stale and misfiled records, and incomplete factories", () => {
   const { mojo, config, restore } = team();
   try {

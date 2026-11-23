@@ -256,15 +256,36 @@ export function lintBrain(roots, name, { staleDays = 30, now = new Date() } = {}
   }
 
   // Links, from records and any note in the brain (outside nested brains).
+  // A record link resolves in this brain (or the brain it names). Failing that,
+  // or for any other [[a/b]] link (an agent card, a note), it resolves the way
+  // Obsidian does: some file in the vault whose path ends with it. The vault is
+  // the outermost registered brain this one sits in, so a team brain inside a
+  // company brain can link to the company's notes and records.
+  let vault = null;
+  const inVault = (l) => {
+    if (!vault) {
+      const top = Object.values(roots).filter((r) => root === r || root.startsWith(r + sep)).sort((a, b) => a.length - b.length)[0] || root;
+      vault = new Set();
+      for (const f of markdownFiles(top)) {
+        const parts = relative(top, f).slice(0, -3).split(sep).map((x) => x.toLowerCase());
+        for (let i = 0; i < parts.length; i++) vault.add(parts.slice(i).join("/"));
+      }
+    }
+    return vault.has(String(l).toLowerCase().replace(/\.md$/, ""));
+  };
   for (const f of markdownFiles(root)) {
     if ([...nested].some((n) => f.startsWith(n + sep))) continue;
     const { meta, body } = parseFrontmatter(readFileSync(f, "utf8"));
     for (const l of linksOf(meta, body)) {
-      let t;
-      try { t = parseRef(l); } catch { issues.push({ kind: "broken-link", path: rel(f), detail: `[[${l}]] isn't a record reference` }); continue; }
-      if (t.brain && t.brain !== name) {
+      let t = null;
+      try { t = parseRef(l); } catch { /* not a record: check it as a path */ }
+      if (t && t.brain && t.brain !== name) {
         if (!roots[t.brain] || !existsSync(recordPath(roots[t.brain], t.type, t.id))) issues.push({ kind: "broken-link", path: rel(f), detail: `[[${l}]] doesn't exist` });
-      } else if (!known.has(`${t.type}/${t.id}`)) issues.push({ kind: "broken-link", path: rel(f), detail: `[[${l}]] doesn't exist` });
+      } else if (t && known.has(`${t.type}/${t.id}`)) continue;
+      else if (t && inVault(`${RECORD_TYPES[t.type].folder}/${t.id}`)) continue;
+      else if (!t && /^[a-z0-9-]+:/.test(l)) issues.push({ kind: "broken-link", path: rel(f), detail: `[[${l}]] isn't a record reference` });
+      else if (!t && inVault(l)) continue;
+      else issues.push({ kind: "broken-link", path: rel(f), detail: t ? `[[${l}]] doesn't exist` : `[[${l}]] matches no file` });
     }
   }
 

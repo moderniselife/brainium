@@ -71,7 +71,7 @@ Every entry the Brainium tools write names its agent (`_agent: name_` on notes, 
 |---|---|
 | `unsigned` | a note in `shared/` with no agent on it |
 | `missing-field` | a record without its type's required fields |
-| `broken-link` | `[[folder/id]]` to a record that doesn't exist |
+| `broken-link` | `[[folder/id]]` to a record that doesn't exist, or any other `[[a/b]]` link (an agent card, a note) that no file's path ends with, as Obsidian resolves it. A team brain inside a company brain resolves against the whole company vault |
 | `stale` | a live record (active, open, draft, testing, …) untouched for 30 days, or past its `review_by` |
 | `misfiled` | a record whose `type` doesn't match its folder |
 | `factory` | a factory without exactly one production prompt, or without evals |
