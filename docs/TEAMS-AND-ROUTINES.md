@@ -116,3 +116,25 @@ If `claude` or `codex` isn't found (launchd doesn't get your shell's `PATH`), se
 ## MCP tools added
 
 `brain_share`, `agent_list`, `routine_list`, `routine_save` (saves a routine switched off and unapproved, for you to review), plus `brain`, `agent`, `shared` and `everyone` on the existing tools.
+
+## Preflight: rules and brain up to date before any work
+
+Agents forget to pull, so their rules go stale. Preflight does it for them, before any work:
+
+```json
+// .brainium.json at the repo root
+{
+  "brain": "acme",
+  "update": [".", "agents", "brain"],
+  "rules": ["AGENTS.md", ".cursor/rules", "agents/_shared", "agents/rules", "agents/{agent}", "!agents/**/*.test.ts"]
+}
+```
+
+- **`update`**: git checkouts (relative to `.brainium.json`) to bring up to date. Pulls are fast-forward only. A checkout on a detached HEAD (a pinned submodule), with no upstream, or with local work in the way is left alone and reported.
+- **`rules`**: files or folders the agent must follow. `{agent}` stands for the agent's slug (its own prompt folder), and an entry starting with `!` is a glob to leave out. The first preflight lists all of them. After that it lists only the ones that changed since that agent's last preflight (tracked per agent, per repo).
+
+It runs:
+
+- **Claude Code**: automatically at session start (the hook `brainium wire --app claude-code` installs), so the result is in the agent's context before its first turn.
+- **Any MCP app** (Cursor, Claude Desktop…): the `brain_preflight` tool. The MCP instructions and skill tell the agent to call it first.
+- **Anything else** (cloud VMs, cron, CI): `brainium preflight --agent NAME`.

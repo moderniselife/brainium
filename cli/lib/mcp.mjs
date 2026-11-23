@@ -159,6 +159,11 @@ export const TOOLS = [
     inputSchema: { type: "object", properties: { brain: str("Which brain (default auto)"), stale_days: { type: "number" }, write: { type: "boolean" } } },
   },
   {
+    name: "brain_preflight",
+    description: "Call this FIRST, before any other work: brings the project's rules and brain up to date (fast-forward pulls of the repos its .brainium.json lists) and lists the rule files that changed since you last looked. Reread every file it lists and follow the new version. If it reports a repo it couldn't update, say so before relying on that repo.",
+    inputSchema: { type: "object", properties: { agent: str("Your agent name (changes are tracked per agent)") } },
+  },
+  {
     name: "brain_pending",
     description: "List captured sessions waiting to be filed. When any are waiting, read each with brain_pending_get and file it with brain_resolve — you are the summarizer.",
     inputSchema: { type: "object", properties: {} },
@@ -246,6 +251,11 @@ export async function callTool(name, args = {}, { cwd = process.cwd(), env = pro
         return lintReport(h) + `\n\nSaved to ${h.path} (git: ${h.commit}).`;
       }
       return lintReport(lintBrain(rs, name, opts));
+    }
+    case "brain_preflight": {
+      const { preflight } = await import("./preflight.mjs");
+      const r = preflight(config, { cwd: args.project || env.BRAINIUM_PROJECT || cwd, agent: args.agent || env.BRAINIUM_AGENT || "" });
+      return r.configured ? r.text : "No preflight set up for this project (no update/rules in .brainium.json). Carry on.";
     }
     case "brain_pending": {
       const items = listPending(config).map(({ id, topic, cwd: c, endedAt, projectBrain, attempts, lastError }) =>

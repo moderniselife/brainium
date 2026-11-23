@@ -45,6 +45,8 @@ Routines (scheduled prompts, upkeep jobs and shell commands in a brain's routine
   brainium routines run REF             Run one now (REF = brain/routine)
   brainium routines tick                Start whatever is due (the scheduler calls this)
   brainium scheduler install|uninstall|status
+  brainium preflight [--agent NAME] [--no-pull]  Before any work: fast-forward the repos .brainium.json lists
+                                        and list rule files changed since this agent last looked
   brainium lint [--brain NAME] [--write] [--stale-days N]
                                         Check for context rot; --write saves shared/health.md
   brainium record get FOLDER/ID [--brain NAME]
@@ -289,6 +291,13 @@ async function main() {
       return;
     }
 
+    case "preflight": {
+      const { preflight } = await import("../cli/lib/preflight.mjs");
+      const r = preflight(config, { cwd: process.cwd(), agent: typeof args.agent === "string" ? args.agent : process.env.BRAINIUM_AGENT || "", pull: args.pull !== false && !args["no-pull"] });
+      print(args, r, (v) => (v.configured ? v.text : "No preflight set up here: add \"update\" and/or \"rules\" to .brainium.json."));
+      return;
+    }
+
     case "lint": {
       const { lintBrain, lintReport, writeHealth } = await import("../cli/lib/records.mjs");
       const { brainRoots, pickBrain, defaultBrainName } = await import("../cli/lib/brain.mjs");
@@ -390,7 +399,14 @@ async function main() {
 
     case "session-start": {
       try {
-        await readStdin();
+        const input = await readStdin();
+        let cwd = process.cwd();
+        try { cwd = JSON.parse(input || "{}").cwd || cwd; } catch { /* not JSON */ }
+        try {
+          const { preflight } = await import("../cli/lib/preflight.mjs");
+          const r = preflight(config, { cwd, agent: process.env.BRAINIUM_AGENT || "" });
+          if (r.configured) process.stdout.write(r.text + "\n");
+        } catch { /* never block a session */ }
         const msg = sessionStartMessage(config);
         if (msg) process.stdout.write(msg + "\n");
       } catch { /* never block a session */ }
