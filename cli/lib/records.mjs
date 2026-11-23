@@ -215,7 +215,7 @@ export function markdownFiles(root, out = []) {
   return out;
 }
 
-export const SIGNATURE = /^(agent|persona|from|author|created_by)\s*:|_agent: [^_]+_|_\([^)]*agent: [^)]+\)_|^\s*\**agent\**\s*:/im;
+export const SIGNATURE = /^(agent|persona|from|author|created_by|maintained_by|mapped_by)\s*:|_agent: [^_]+_|_\([^)]*agent: [^)]+\)_|^\s*\**agent\**\s*:/im;
 
 /**
  * Check a brain. Returns { brain, checked, issues: [{ kind, path, detail }] }.

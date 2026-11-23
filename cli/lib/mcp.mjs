@@ -7,7 +7,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createInterface } from "node:readline";
 import { loadConfig, resolvedSummarizer } from "./config.mjs";
-import { brainRoots, defaultBrainName, getAgentCard, listAgents, listFolder, logEntry, readEntry, saveAgentCard, search, shareEntry, KINDS } from "./brain.mjs";
+import { brainRoots, defaultBrainName, pickBrain, getAgentCard, listAgents, listFolder, logEntry, readEntry, saveAgentCard, search, shareEntry, KINDS } from "./brain.mjs";
 import { describe, listRoutines, loadApprovals, loadState, saveRoutine } from "./routines.mjs";
 import { getPending, listPending, resolvePending } from "./capture.mjs";
 import { getRecord, lintBrain, lintReport, RECORD_TYPES, saveRecord, writeHealth } from "./records.mjs";
@@ -248,7 +248,6 @@ export async function callTool(name, args = {}, { cwd = process.cwd(), env = pro
       return json(getRecord(roots(), args.ref, { brain: which || "auto", defaultBrain }));
     case "brain_lint": {
       const rs = roots();
-      const { pickBrain } = await import("./brain.mjs");
       const name = pickBrain(rs, which || "auto", defaultBrain);
       const opts = { staleDays: args.stale_days || 30 };
       if (args.write) {
