@@ -67,7 +67,7 @@ test("listing finds routines per brain and reports problems", () => {
     put(join(mojo, "routines", "bad.md"), "---\nname: Bad\nschedule: soon\ntype: launch\n---\n");
     newRoutine(config(), { brain: "mojo", name: "Brief" });
     const rs = listRoutines(config());
-    assert.deepEqual(rs.map((r) => r.ref), ["mojo/bad", "mojo/brain-health", "mojo/brief"]); // README and _template are skipped; brain-health comes with every brain
+    assert.deepEqual(rs.map((r) => r.ref), ["mojo/bad", "mojo/brain-health", "mojo/brief", "mojo/librarian", "mojo/organize"]); // README and _template are skipped; brain-health, organize and librarian come with every brain
     assert.match(rs[0].errors.join(" "), /type must be/);
     assert.match(rs[0].errors.join(" "), /schedule:/);
     assert.equal(rs[2].enabled, false);
@@ -113,6 +113,7 @@ test("tick: waits for the first slot, starts what's due once, skips unapproved a
     approveRoutine(config(), "mojo/brief", env);
     setEnabled(config(), "mojo/brief", true);
     setEnabled(config(), "mojo/unapproved", true);
+    setEnabled(config(), "mojo/organize", false); // every brain's daily organize would be due too; this test is about the ones above
     const started = [];
     const start = (ref, when) => started.push([ref, when.toISOString()]);
 

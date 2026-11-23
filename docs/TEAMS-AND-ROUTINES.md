@@ -85,7 +85,7 @@ Read yesterday's shared sessions and write a short brief of what needs attention
 |---|---|---|
 | `prompt` | The prompt through Claude Code or Codex, headless, in the profile you name, as the agent | Yes |
 | `shell` | The first ```` ``` ```` block (or the body) with your login shell | Yes |
-| `upkeep` | `job: sync` (git pull --rebase, then push this brain), `distill` (file captured sessions), `digest` (what each agent and `shared/` wrote since the last run) | No |
+| `upkeep` | `job: sync` (git pull --rebase, then push this brain), `distill` (file captured sessions), `digest` (what each agent and `shared/` wrote since the last run), `lint` (health report), `organize` (mechanical tidy-up, see CONTEXT-SYSTEM.md) | No |
 
 ```bash
 brainium routines                         # next/last run, approval, problems

@@ -164,6 +164,11 @@ export const TOOLS = [
     inputSchema: { type: "object", properties: { agent: str("Your agent name (changes are tracked per agent)") } },
   },
   {
+    name: "brain_organize",
+    description: "Tidy a brain: fix what lint finds that has exactly one right answer — move misfiled records to their type's folder, sign unsigned shared notes from evidence (their agent folder, an import note, the commit that added them), rewrite old [[person/x]] links to [[people/x]] and point broken record links at the one record with that id. Dry run unless apply is true; ambiguous cases are listed, not touched.",
+    inputSchema: { type: "object", properties: { brain: str("Which brain (default auto)"), apply: { type: "boolean", description: "Make the fixes and commit them (default false: just report)" }, agent: str("Your agent name, for the commit") } },
+  },
+  {
     name: "brain_pending",
     description: "List captured sessions waiting to be filed. When any are waiting, read each with brain_pending_get and file it with brain_resolve — you are the summarizer.",
     inputSchema: { type: "object", properties: {} },
@@ -251,6 +256,11 @@ export async function callTool(name, args = {}, { cwd = process.cwd(), env = pro
         return lintReport(h) + `\n\nSaved to ${h.path} (git: ${h.commit}).`;
       }
       return lintReport(lintBrain(rs, name, opts));
+    }
+    case "brain_organize": {
+      const { organizeBrain, organizeReport } = await import("./organize.mjs");
+      const name = pickBrain(roots(), args.brain || "auto", defaultBrain);
+      return organizeReport(organizeBrain(roots(), name, { apply: !!args.apply, agent: args.agent || "" }));
     }
     case "brain_preflight": {
       const { preflight } = await import("./preflight.mjs");
