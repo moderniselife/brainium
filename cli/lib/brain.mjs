@@ -34,6 +34,7 @@ export const KINDS = {
 
 export const RESERVED_BRAIN_NAMES = new Set(["personal", "project", "all", "everyone", "auto", "shared"]);
 export const BRAIN_NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
+const AUTO = Symbol("auto brain");
 
 /** Walk up from `start` to the nearest docs/brainium directory. */
 export function findProjectBrain(start) {
@@ -42,6 +43,30 @@ export function findProjectBrain(start) {
   for (;;) {
     const candidate = join(dir, "docs", "brainium");
     if (existsSync(candidate) && statSync(candidate).isDirectory()) return candidate;
+    const parent = dirname(dir);
+    if (parent === dir) return null;
+    dir = parent;
+  }
+}
+
+/**
+ * Walk up from `start` to the nearest .brainium.json and return the brain it
+ * names ({ "brain": "<name>" }), so a repo can send its "auto" writes to a
+ * named brain (a team or company brain) instead of its docs/brainium/.
+ */
+export function findRepoBrain(start) {
+  if (!start) return null;
+  let dir = resolve(start);
+  for (;;) {
+    const f = join(dir, ".brainium.json");
+    if (existsSync(f)) {
+      try {
+        const name = JSON.parse(readFileSync(f, "utf8")).brain;
+        return typeof name === "string" && BRAIN_NAME.test(name) ? name : null;
+      } catch {
+        return null;
+      }
+    }
     const parent = dirname(dir);
     if (parent === dir) return null;
     dir = parent;
@@ -69,6 +94,10 @@ export function brainRoots(config, projectHint) {
   }
   const project = findProjectBrain(projectHint);
   if (project) roots.project = project;
+  // A repo's .brainium.json can name the brain "auto" means here. Kept off the
+  // enumerable keys so listings and searches see only real brains.
+  const repoBrain = findRepoBrain(projectHint);
+  if (repoBrain && roots[repoBrain]) Object.defineProperty(roots, AUTO, { value: repoBrain, enumerable: false });
   return roots;
 }
 
@@ -84,14 +113,16 @@ function missingBrain(name) {
 }
 
 /**
- * Name of the brain a write or listing goes to. "auto" means the project
- * brain when there is one, else the default brain, else personal.
+ * Name of the brain a write or listing goes to. "auto" means the brain the
+ * repo names in .brainium.json, else the project brain when there is one,
+ * else the default brain, else personal.
  */
 export function pickBrain(roots, brain = "auto", defaultBrain = "personal") {
   if (brain && brain !== "auto") {
     if (!roots[brain]) throw missingBrain(brain);
     return brain;
   }
+  if (roots[AUTO] && roots[roots[AUTO]]) return roots[AUTO];
   for (const name of ["project", defaultBrain, "personal"]) if (roots[name]) return name;
   throw new Error("No brain found. Run `brainium init-personal`, or install Brainium in this repo.");
 }
@@ -357,7 +388,9 @@ export function logEntry(roots, config, { kind = "session", title, body, tags = 
   const root = roots[name];
   const area = areaRoot(roots, name, { agent, shared, create: true });
   const inOwnFolder = agent && area !== root && area !== sharedRoot(root);
-  const by = agent && !inOwnFolder ? `agent: ${String(agent).trim()}` : "";
+  // Every note names its agent, even in the agent's own folder, so it can be
+  // traced if it's ever moved or shared.
+  const by = agent ? `agent: ${String(agent).trim()}` : "";
   const label = [source, by].filter(Boolean).join(", ");
   const cleanTitle = redact(String(title).trim().replace(/\s+/g, " "));
   const cleanBody = redact(String(body || "").trim());
@@ -461,7 +494,19 @@ export function saveAgentCard(roots, config, card, now = new Date()) {
     Recreate: r(card.recreate) || "—",
     Changelog: [`- ${date}: ${old ? "updated" : "created"}`, oldLog].filter(Boolean).join("\n"),
   };
-  const text = `# Agent: ${redact(name)}\n\n` + CARD_SECTIONS.map((s) => `## ${s}\n\n${sections[s]}\n`).join("\n");
+  // Frontmatter: kind (personal | factory), team, maintainers. Kept from the old card unless given.
+  const oldMeta = {};
+  const fm = /^---\n([\s\S]*?)\n---\n/.exec(old);
+  if (fm) for (const line of fm[1].split("\n")) { const kv = /^([a-z_]+):\s*(.*)$/.exec(line.trim()); if (kv) oldMeta[kv[1]] = kv[2]; }
+  const listOf = (v) => (Array.isArray(v) ? v : String(v || "").replace(/^\[|\]$/g, "").split(",")).map((s) => redact(String(s).trim())).filter(Boolean);
+  const meta = {
+    kind: card.kind ? String(card.kind).toLowerCase() : oldMeta.kind || "",
+    team: card.team !== undefined ? r(card.team) : oldMeta.team || "",
+    maintainers: card.maintainers !== undefined ? `[${listOf(card.maintainers).join(", ")}]` : oldMeta.maintainers || "",
+  };
+  if (meta.kind && !["personal", "factory"].includes(meta.kind)) throw new Error("kind must be personal or factory");
+  const front = Object.values(meta).some(Boolean) ? `---\n${Object.entries(meta).filter(([, v]) => v && v !== "[]").map(([k, v]) => `${k}: ${v}`).join("\n")}\n---\n\n` : "";
+  const text = front + `# Agent: ${redact(name)}\n\n` + CARD_SECTIONS.map((s) => `## ${s}\n\n${sections[s]}\n`).join("\n");
   writeFileAtomic(path, text);
   const touched = [path];
   const link = relative(agentsDir, path).split(sep).join("/");

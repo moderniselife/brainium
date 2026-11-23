@@ -43,7 +43,8 @@ With the Brainium MCP tools:
 - [ ] **Incidents?** → `failure` (+ `learning` when reusable). Session-only = incomplete.
 - [ ] Durable knowledge → `learning`; preferences → `memory`; researched Q&A → `question`; follow-ups → `improvement`; pre-ADR chatter → `decision`.
 - [ ] New or changed agent instructions → `agent_card_save`.
-- [ ] Recurring work the user wants on a schedule → `routine_save` (stays off until the user approves it on their machine).
+- [ ] Projects, people, teams, customers, meetings, documents → a **record** (`record_save`, linked with `[[type/id]]`; `record_get` follows links one hop). Update the record rather than writing another note.
+- [ ] Recurring work → `routine_save` (schedule and/or `on:` file changes; starts at `stage: shadow`; stays off until the user approves it on their machine).
 - [ ] One line to the user listing the brain paths updated.
 
 Without the tools, edit the files directly:

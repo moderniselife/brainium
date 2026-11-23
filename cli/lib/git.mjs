@@ -17,6 +17,8 @@ export function findRepoRoot(dir) {
 
 export function initRepo(dir) {
   if (existsSync(join(dir, ".git"))) return false;
+  // A brain inside another repo (a team brain in a company brain's folder) uses that repo.
+  if (findRepoRoot(dir)) return false;
   try {
     git(dir, ["init", "-q"]);
     return true;
