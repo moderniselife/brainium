@@ -27,6 +27,10 @@ export const TYPES = ["prompt", "upkeep", "shell"];
 export const APPS = ["claude-code", "codex"];
 export const JOBS = ["sync", "distill", "digest", "lint"];
 export const STAGES = ["shadow", "limited", "full"];
+// When a run is written to the brain as a session entry. "failures" logs the
+// first failure and the recovery after it, not every quiet success, so an
+// upkeep job that runs every 30 minutes doesn't fill the session log.
+export const LOG_MODES = ["always", "failures", "never"];
 
 // ---------------------------------------------------------------------------
 // File format
@@ -279,6 +283,8 @@ function loadRoutine(brain, root, file) {
   }
   const stage = String(meta.stage || "full").toLowerCase();
   if (!STAGES.includes(stage)) errors.push(`stage must be ${STAGES.join(", ")}`);
+  const log = String(meta.log || (type === "upkeep" ? "failures" : "always")).toLowerCase();
+  if (!LOG_MODES.includes(log)) errors.push(`log must be ${LOG_MODES.join(", ")}`);
   const app = String(meta.app || "claude-code").toLowerCase();
   if (type === "prompt" && !APPS.includes(app)) errors.push(`app must be ${APPS.join(" or ")}`);
   const job = String(meta.job || "").toLowerCase();
@@ -306,6 +312,7 @@ function loadRoutine(brain, root, file) {
     job,
     timeoutMs: parseDuration(meta.timeout, 30 * MINUTE),
     catchUp: meta.catch_up !== false,
+    log,
     enabled: meta.enabled !== false,
     body: type === "shell" ? shellCommand(body) : body,
     hash: routineHash(text),
@@ -656,10 +663,12 @@ export async function runRoutine(config, ref, { scheduledFor = null, force = fal
     writeFileAtomic(rawFile, output + "\n", 0o600);
     const tail = output.split("\n").slice(-60).join("\n");
     let logged = null;
-    try {
+    const wasOk = !before.lastStatus || before.lastStatus === "ok";
+    const worthLogging = r.log === "always" || (r.log === "failures" && (status !== "ok" ? wasOk : !wasOk));
+    if (worthLogging) try {
       const roots = brainRoots(config, null);
       const body = [
-        `**${status === "ok" ? "Ran" : status === "failed" ? "Failed" : "Timed out"}** — ${r.type}${r.type === "prompt" ? ` via ${r.app}` : r.type === "upkeep" ? ` (${r.job})` : ""}, ${Math.round(durationMs / 1000)}s${result.exit !== 0 && !result.timedOut ? `, exit ${result.exit}` : ""}${r.stage !== "full" && r.type !== "upkeep" ? `, stage ${r.stage}${r.stage === "limited" ? ` (limit ${r.limit})` : ""}` : ""}${scheduledFor ? "" : r.on.length ? ", triggered by file changes" : ""}.`,
+        `**${status === "ok" ? (r.log === "failures" ? "Recovered" : "Ran") : status === "failed" ? "Failed" : "Timed out"}** — ${r.type}${r.type === "prompt" ? ` via ${r.app}` : r.type === "upkeep" ? ` (${r.job})` : ""}, ${Math.round(durationMs / 1000)}s${result.exit !== 0 && !result.timedOut ? `, exit ${result.exit}` : ""}${r.stage !== "full" && r.type !== "upkeep" ? `, stage ${r.stage}${r.stage === "limited" ? ` (limit ${r.limit})` : ""}` : ""}${scheduledFor ? "" : r.on.length ? ", triggered by file changes" : ""}.`,
         tail ? `\n**Output**${output.length > tail.length ? " (last lines; full log on the machine that ran it)" : ""}\n\n\`\`\`text\n${tail.replace(/```/g, "ʼʼʼ")}\n\`\`\`` : "",
       ].join("\n");
       logged = logEntry(roots, config, { kind: "session", title: `Routine: ${r.name}`, body, brain: r.brain, agent: r.agent, source: "routine", now: ended }).path;
@@ -672,7 +681,7 @@ export async function runRoutine(config, ref, { scheduledFor = null, force = fal
       lastStatus: status,
       lastExit: result.exit,
       lastDurationMs: durationMs,
-      lastLog: logged,
+      lastLog: logged || before.lastLog || null,
       lastRawLog: rawFile,
       lastOutput: tail.slice(-2000),
     }, env);

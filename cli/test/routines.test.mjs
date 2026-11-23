@@ -140,6 +140,28 @@ test("tick: waits for the first slot, starts what's due once, skips unapproved a
   } finally { restore(); }
 });
 
+test("upkeep routines log the first failure and the recovery, not every quiet run; log: always logs each run", async () => {
+  const { mojo, env, config, restore } = team();
+  try {
+    put(join(mojo, "routines", "tidy.md"), "---\nname: Tidy\nschedule: every 30m\ntype: upkeep\njob: sync\n---\n");
+    const results = [0, 0, 1, 1, 0, 0];
+    const upkeep = async () => ({ exit: results.shift(), output: "done", timedOut: false });
+    const logs = [];
+    for (let i = 0; i < 6; i++) logs.push((await runRoutine(config(), "mojo/tidy", { env, executors: { upkeep } })).log);
+    assert.deepEqual(logs.map(Boolean), [false, false, true, false, true, false]);
+    const day = readFileSync(join(mojo, "shared", "sessions", logs[2].split("/").pop()), "utf8");
+    assert.match(day, /\*\*Failed\*\*/);
+    assert.match(day, /\*\*Recovered\*\*/);
+    assert.equal(loadState(env)["mojo/tidy"].lastLog, logs[4]);
+
+    put(join(mojo, "routines", "chatty.md"), "---\nname: Chatty\nschedule: every 30m\ntype: upkeep\njob: sync\nlog: always\n---\n");
+    const ok = async () => ({ exit: 0, output: "", timedOut: false });
+    assert.ok((await runRoutine(config(), "mojo/chatty", { env, executors: { upkeep: ok } })).log);
+    put(join(mojo, "routines", "bad.md"), "---\nname: Bad\nschedule: every 30m\ntype: upkeep\njob: sync\nlog: sometimes\n---\n");
+    assert.ok(listRoutines(config()).find((r) => r.ref === "mojo/bad").errors.some((e) => /log must be/.test(e)));
+  } finally { restore(); }
+});
+
 test("run: shell output is redacted, logged to the agent and kept raw on this machine; a slot runs once", async () => {
   const { mojo, raw, env, config, restore } = team();
   try {
@@ -211,7 +233,7 @@ test("upkeep: digest lists what each agent and the shared area wrote; sync expla
     const r = await runRoutine(config(), "mojo/sync", { env });
     assert.equal(r.status, "ok");
     assert.match(r.output, /No remote/);
-    assert.match(r.log, /^mojo:shared\/sessions\//);
+    assert.equal(r.log, null); // a quiet upkeep success isn't written to the session log
   } finally { restore(); }
 });
 

@@ -74,6 +74,7 @@ cwd: ~/Projects/mojo           # optional
 args: --permission-mode acceptEdits            # optional extra CLI arguments
 timeout: 20m                   # default 30m
 catch_up: true                 # run once after a missed time (asleep); false records a miss
+log: always                    # session entry per run: always (default; upkeep defaults to failures), failures (first failure + recovery), never
 enabled: true
 ---
 
