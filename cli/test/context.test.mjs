@@ -74,6 +74,9 @@ test("lint finds unsigned notes, missing fields, broken links, stale and misfile
     assert.deepEqual(kinds("unsigned"), ["shared/learnings/2026-01-01-x.md: no agent: (or persona:/from:/author:) on it"]);
     assert.ok(kinds("missing-field").includes("shared/meetings/m.md: meeting needs date"));
     assert.ok(kinds("broken-link").some((x) => x.includes("[[document/missing]]")));
+    put(join(mojo, "shared/learnings/2026-01-03-z.md"), "---\nagent: ops\n---\n# z\n\nWrite `[[type/id]]` or `[[project/nope]]`.\n\n```\n[[person/nobody]]\n```\n");
+    assert.ok(!kinds("broken-link").some((x) => x.includes("2026-01-03-z")), "links inside code are examples, not links");
+    assert.ok(!lintBrain(brainRoots(config(), null), "mojo").issues.some((i) => i.path.endsWith("README.md")), "the scaffold's own READMEs lint clean");
     assert.ok(kinds("stale").some((x) => x.startsWith("shared/projects/old.md")));
     assert.ok(kinds("stale").some((x) => x.startsWith("shared/documents/spec.md") && x.includes("review_by")));
     assert.ok(kinds("misfiled").some((x) => x.startsWith("shared/customers/wrong.md")));
