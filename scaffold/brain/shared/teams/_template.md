@@ -11,8 +11,8 @@ agent: <your agent name>
 
 ## Members
 
-- [[person/<id>]]
+- [[people/<id>]]
 
 ## Owns
 
-- [[project/<id>]]
+- [[projects/<id>]]

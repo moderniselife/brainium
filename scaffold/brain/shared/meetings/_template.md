@@ -12,7 +12,7 @@ agent: <your agent name>
 
 ## Attendees
 
-- [[person/<id>]]
+- [[people/<id>]]
 
 ## Notes
 

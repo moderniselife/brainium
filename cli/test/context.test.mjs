@@ -6,7 +6,7 @@ import { sandbox, put, useEnv } from "./helpers.mjs";
 import { initBrain, initPersonal } from "../lib/personal.mjs";
 import { brainRoots, logEntry, pickBrain, saveAgentCard } from "../lib/brain.mjs";
 import { addBrain, loadConfig, setConfig } from "../lib/config.mjs";
-import { getRecord, lintBrain, parseRef, saveRecord, writeHealth } from "../lib/records.mjs";
+import { folderRef, getRecord, lintBrain, parseFrontmatter, parseRef, saveRecord, writeHealth } from "../lib/records.mjs";
 import { approveRoutine, changedFiles, globToRegex, listRoutines, loadState, runRoutine, saveRoutine, setEnabled, stagePreface, tick } from "../lib/routines.mjs";
 import { callTool } from "../lib/mcp.mjs";
 
@@ -50,12 +50,41 @@ test("records: saved once, fields merge, links resolve one hop and backlinks are
     assert.match(text, /created_by: planner/);
     put(join(mojo, "shared/meetings/kickoff.md"), "---\ntype: meeting\ndate: 2026-01-02\nagent: ops\n---\n\nAbout [[project/launch]].\n");
     const r = getRecord(brainRoots(config(), null), "project/launch", { brain: "mojo" });
-    assert.deepEqual(r.links.map((l) => [l.ref, !!l.missing]), [["person/sam", false], ["customer/acme", true]]);
+    assert.deepEqual(r.links.map((l) => [l.ref, !!l.missing]), [["people/sam", false], ["customers/acme", true]]);
     assert.equal(r.links[0].title, "Sam");
     assert.deepEqual(r.backlinks, ["mojo:shared/meetings/kickoff.md"]);
     assert.deepEqual(parseRef("[[mojo:projects/launch]]"), { brain: "mojo", type: "project", id: "launch" });
     assert.throws(() => parseRef("widget/x"), /unknown record type/);
     assert.throws(() => saveRecord(roots, config(), { type: "widget", title: "x", brain: "mojo" }), /type must be/);
+  } finally { restore(); }
+});
+
+test("record links are written in folder form as Obsidian wikilinks, and every form is read back", () => {
+  const { mojo, config, restore } = team();
+  try {
+    const roots = brainRoots(config(), null);
+    saveRecord(roots, config(), { type: "person", id: "sam", title: "Sam", fields: { role: "PM" }, brain: "mojo", agent: "ops" });
+    saveRecord(roots, config(), { type: "project", id: "launch", title: "Launch", fields: { status: "active", owner: "sam" }, links: ["person/sam", "[[customers/acme]]", "other:document/spec"], brain: "mojo", agent: "ops" });
+    const text = readFileSync(join(mojo, "shared/projects/launch.md"), "utf8");
+    assert.match(text, /links:\n {2}- "\[\[people\/sam\]\]"\n {2}- "\[\[customers\/acme\]\]"\n {2}- "\[\[other:documents\/spec\]\]"\n/);
+    assert.deepEqual(parseFrontmatter(text).meta.links, ["[[people/sam]]", "[[customers/acme]]", "[[other:documents/spec]]"]);
+    // Saving again with the old singular form doesn't duplicate the link.
+    saveRecord(roots, config(), { type: "project", id: "launch", links: ["person/sam"], brain: "mojo", agent: "ops" });
+    assert.deepEqual(parseFrontmatter(readFileSync(join(mojo, "shared/projects/launch.md"), "utf8")).meta.links.length, 3);
+    // Old inline-list frontmatter still parses.
+    assert.deepEqual(parseFrontmatter("---\nlinks: [person/sam, project/x]\nreview_by:\nagent: ops\n---\n").meta, { links: ["person/sam", "project/x"], review_by: "", agent: "ops" });
+    // Obsidian headings and aliases, and both type and folder spellings, count as links and backlinks.
+    put(join(mojo, "shared/meetings/a.md"), "---\ntype: meeting\ndate: 2026-01-02\nagent: ops\n---\n\nWith [[people/sam|Sam]] about [[projects/launch#now]].\n");
+    put(join(mojo, "shared/meetings/b.md"), "---\ntype: meeting\ndate: 2026-01-03\nagent: ops\n---\n\nWith [[person/sam]].\n");
+    const sam = getRecord(brainRoots(config(), null), "people/sam", { brain: "mojo" });
+    assert.equal(sam.ref, "mojo:people/sam");
+    assert.deepEqual(sam.backlinks.sort(), ["mojo:shared/meetings/a.md", "mojo:shared/meetings/b.md", "mojo:shared/projects/launch.md"]);
+    assert.equal(folderRef("[[person/sam|Sam]]"), "people/sam");
+    assert.equal(folderRef("team-x:customer/acme"), "team-x:customers/acme");
+    assert.deepEqual(parseRef("[[people/sam#role|Sam]]"), { brain: null, type: "person", id: "sam" });
+    const broken = lintBrain(brainRoots(config(), null), "mojo").issues.filter((i) => i.kind === "broken-link").map((i) => i.detail);
+    assert.ok(broken.some((d) => d.includes("customers/acme")));
+    assert.ok(!broken.some((d) => d.includes("sam") || d.includes("launch")));
   } finally { restore(); }
 });
 

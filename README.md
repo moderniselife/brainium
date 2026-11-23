@@ -25,7 +25,7 @@ Portable **git-backed agent memory**: session logs, failures, learnings, and pro
 | **Capture** | Claude Code `SessionEnd` hook → redacted, private queue → filed by your AI or a summarizer |
 | **Team brains** | `brainium brain add NAME DIR --create` → `shared/`, `agents/<name>/`, `routines/` |
 | **Routines** | `routines/<name>.md` → prompts (Claude Code / Codex), upkeep (`sync`, `distill`, `digest`, `lint`) or shell, on a schedule and/or `on:` file changes, staged `shadow` → `limited` → `full`; run by `brainium scheduler install` (launchd / systemd / Task Scheduler) or Prism |
-| **Records** | `shared/{projects,people,teams,customers,meetings,documents}/` — one file per thing, linked with `[[type/id]]`; `record_save`, `record_get` (follows links one hop) |
+| **Records** | `shared/{projects,people,teams,customers,meetings,documents}/` — one file per thing, linked with `[[folder/id]]` (e.g. `[[people/sam]]`, which Obsidian resolves too); `record_save`, `record_get` (follows links one hop) |
 | **Health** | `brainium lint` / `brain_lint` and a weekly routine → `shared/health.md`: unsigned notes, missing fields, broken links, stale records, factories without a production prompt or evals |
 | **Factories** | Shared agents (`kind: factory`) with versioned `prompts/` and `evals/` |
 | **Repo → brain** | `.brainium.json` (`{ "brain": "NAME" }`) at a repo root sends "auto" writes to that brain |

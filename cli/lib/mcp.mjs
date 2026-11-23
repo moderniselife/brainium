@@ -132,7 +132,7 @@ export const TOOLS = [
   },
   {
     name: "record_save",
-    description: "Create or update a record: one of the things work is about (project, person, team, customer, meeting, document), kept once in the brain's shared area and linked to other records with [[type/id]]. Fields merge into what's there; the body is replaced only if given; links are added. Prefer updating the record over writing a new note about the same thing. Never include secrets.",
+    description: "Create or update a record: one of the things work is about (project, person, team, customer, meeting, document), kept once in the brain's shared area and linked to other records with [[folder/id]] (e.g. [[people/sam]]; the type name, [[person/sam]], also works). Fields merge into what's there; the body is replaced only if given; links are added. Prefer updating the record over writing a new note about the same thing. Never include secrets.",
     inputSchema: {
       type: "object",
       properties: {
@@ -140,7 +140,7 @@ export const TOOLS = [
         id: str("Short stable id, e.g. onboarding-m2 (default: from the title)"),
         title: str("Display title"),
         fields: { type: "object", description: "Frontmatter fields, e.g. { status: \"active\", owner: \"ops\", team: \"qa\", review_by: \"2026-12-31\" }. project needs status+owner, person role, customer status, meeting date, document status" },
-        links: { type: "array", items: { type: "string" }, description: 'Records this one relates to: "person/sam", "project/launch", or "other-brain:project/x"' },
+        links: { type: "array", items: { type: "string" }, description: 'Records this one relates to: "people/sam", "projects/launch", or "other-brain:projects/x" (saved as Obsidian-style [[wikilinks]])' },
         body: str("Markdown body (replaces the old body)"),
         brain: str("Which brain (default auto)"),
         agent: str("Your agent name (recorded as who last updated it)"),
@@ -151,7 +151,7 @@ export const TOOLS = [
   {
     name: "record_get",
     description: "Read a record and everything one hop away: the records it links to (title, status, or missing) and the notes and records that link back to it. Use this before searching when you know the project, person, customer or meeting.",
-    inputSchema: { type: "object", properties: { ref: str('type/id, e.g. "project/launch" or "team-brain:customer/acme"'), brain: str("Which brain (default auto)") }, required: ["ref"] },
+    inputSchema: { type: "object", properties: { ref: str('folder/id, e.g. "projects/launch" or "team-brain:customers/acme" (type/id like "project/launch" also works)'), brain: str("Which brain (default auto)") }, required: ["ref"] },
   },
   {
     name: "brain_lint",

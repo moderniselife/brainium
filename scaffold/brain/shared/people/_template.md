@@ -14,4 +14,4 @@ agent: <your agent name>
 
 ## Works on
 
-- [[project/<id>]]
+- [[projects/<id>]]

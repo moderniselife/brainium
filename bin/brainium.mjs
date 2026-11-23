@@ -47,7 +47,7 @@ Routines (scheduled prompts, upkeep jobs and shell commands in a brain's routine
   brainium scheduler install|uninstall|status
   brainium lint [--brain NAME] [--write] [--stale-days N]
                                         Check for context rot; --write saves shared/health.md
-  brainium record get TYPE/ID [--brain NAME]
+  brainium record get FOLDER/ID [--brain NAME]
                                         A record plus what it links to and what links back
                                         Run ticks every minute with launchd / systemd / Task Scheduler
 
@@ -302,7 +302,7 @@ async function main() {
 
     case "record": {
       const [sub, ref] = rest;
-      if (sub !== "get" || !ref) throw new Error("usage: brainium record get TYPE/ID [--brain NAME]");
+      if (sub !== "get" || !ref) throw new Error("usage: brainium record get FOLDER/ID [--brain NAME]");
       const { getRecord } = await import("../cli/lib/records.mjs");
       const { brainRoots, defaultBrainName } = await import("../cli/lib/brain.mjs");
       const r = getRecord(brainRoots(config, process.cwd()), ref, { brain: typeof args.brain === "string" ? args.brain : "auto", defaultBrain: defaultBrainName(config) });

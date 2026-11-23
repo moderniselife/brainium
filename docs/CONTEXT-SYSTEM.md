@@ -38,7 +38,10 @@ title: Spring launch
 status: active
 owner: sam
 team: marketing
-links: [person/sam, customer/acme, document/launch-brief]
+links:
+  - "[[people/sam]]"
+  - "[[customers/acme]]"
+  - "[[documents/launch-brief]]"
 review_by: 2026-06-30
 agent: planner
 created_by: planner
@@ -50,8 +53,8 @@ updated: 2026-04-02
 ```
 
 - `record_save` creates or updates one. Fields merge into what's there, links are added, and the body is replaced only when you give one. It stamps `updated`, `agent` and (first time) `created_by`.
-- `record_get project/launch` returns the record, the title and status of everything it links to (or that a link is missing), and every note or record that links back to it.
-- Link from anywhere with `[[type/id]]`, or `[[brain:type/id]]` across brains.
+- `record_get projects/launch` returns the record, the title and status of everything it links to (or that a link is missing), and every note or record that links back to it.
+- Link from anywhere with `[[folder/id]]`, e.g. `[[people/sam]]` or `[[projects/launch#now|the launch]]`, or `[[brain:folder/id]]` across brains. Brainium writes the folder form (as quoted wikilinks in `links:`, and in the templates' Links sections), so Obsidian's links, backlinks and graph work on the same files. The type form (`[[person/sam]]`) is still read. Cross-brain links only resolve in Brainium.
 - Required fields: project `status` and `owner`, person `role`, customer `status`, meeting `date`, document `status`.
 
 Prefer updating a record over writing a new note about the same thing: that's what keeps one source of truth.
@@ -68,7 +71,7 @@ Every entry the Brainium tools write names its agent (`_agent: name_` on notes, 
 |---|---|
 | `unsigned` | a note in `shared/` with no agent on it |
 | `missing-field` | a record without its type's required fields |
-| `broken-link` | `[[type/id]]` to a record that doesn't exist |
+| `broken-link` | `[[folder/id]]` to a record that doesn't exist |
 | `stale` | a live record (active, open, draft, testing, …) untouched for 30 days, or past its `review_by` |
 | `misfiled` | a record whose `type` doesn't match its folder |
 | `factory` | a factory without exactly one production prompt, or without evals |
