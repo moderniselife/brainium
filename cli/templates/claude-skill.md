@@ -27,6 +27,7 @@ Not a named agent? Leave `agent` out: everything goes to `shared/`.
 
 ## Start of work
 
+0. `brain_preflight` (pass your agent name) — before anything else, every time: it pulls the latest rules and brain and lists the rule files that changed since you last looked. Reread each one it lists. (Claude Code runs it for you at session start; its output is already in your context.)
 1. `brain_pending` — if captured sessions are waiting, read each with `brain_pending_get`, then file a concise session entry with `brain_resolve` (What we did / Learnings / Mistakes / Open threads / Artifacts). This replaces a separate AI summariser: you are the summariser.
 2. `brain_search` for the task's key terms when prior context could matter.
 

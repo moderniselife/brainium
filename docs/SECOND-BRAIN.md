@@ -57,7 +57,7 @@ With **agent** mode, captures wait in a queue; your AI sees them at session star
 
 ## MCP tools
 
-`brain_search`, `brain_read`, `brain_list`, `brain_log`, `agent_card_save`, `agent_card_get`, `brain_pending`, `brain_pending_get`, `brain_resolve`, `brain_info`.
+`brain_preflight`, `brain_search`, `brain_read`, `brain_list`, `brain_log`, `agent_card_save`, `agent_card_get`, `brain_pending`, `brain_pending_get`, `brain_resolve`, `brain_info`.
 
 ## Config
 

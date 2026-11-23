@@ -21,6 +21,7 @@ Portable **git-backed agent memory**: session logs, failures, learnings, and pro
 | **Claude Code** | `.claude/skills/brainium/` + `CLAUDE.md` section |
 | **Generic** | `AGENTS.md` + [prompt snippet](./agents/generic/prompts/closeout-system.md) |
 | **Personal brain** | `brainium init-personal` → `~/Brainium` (sessions, memories, learnings, **agents/** cards…) |
+| **Preflight** | Before any work, `brain_preflight` (or the Claude Code session-start hook, or `brainium preflight`) fast-forwards the repos `.brainium.json` lists and tells the agent which rule files changed since it last looked — no more "pull first" reminders |
 | **MCP server** | `brainium mcp` — `brain_search`, `brain_log`, `agent_card_save`, `brain_pending`… |
 | **Capture** | Claude Code `SessionEnd` hook → redacted, private queue → filed by your AI or a summarizer |
 | **Team brains** | `brainium brain add NAME DIR --create` → `shared/`, `agents/<name>/`, `routines/` |
