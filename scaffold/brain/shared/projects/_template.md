@@ -19,5 +19,5 @@ agent: <your agent name>
 
 ## Links
 
-- [[person/<id>]]
-- [[document/<id>]]
+- [[people/<id>]]
+- [[documents/<id>]]

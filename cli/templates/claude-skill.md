@@ -35,7 +35,7 @@ Not a named agent? Leave `agent` out: everything goes to `shared/`.
 - `brain_log` kind `session` (brain `auto` picks the project brain when there is one).
 - Incidents → `failure` (+ `learning` when reusable). Durable knowledge → `learning`. Preferences → `memory`.
 - New or changed agent instructions → `agent_card_save` so the agent can be recreated on any account.
-- Things work is about (a project, person, team, customer, meeting or document) → one **record** with `record_save` (update it rather than writing another note), linked with `[[type/id]]`; `record_get type/id` reads it plus everything one hop away. Check it before searching.
+- Things work is about (a project, person, team, customer, meeting or document) → one **record** with `record_save` (update it rather than writing another note), linked with `[[folder/id]]` like `[[people/sam]]`; `record_get folder/id` reads it plus everything one hop away. Check it before searching.
 - Recurring work the user wants done → `routine_save`: on a schedule, `on:` file changes, or both. New routines start at `stage: shadow` (they propose, a human promotes them to limited, then full); it stays off until the user approves it on their machine.
 - A shared agent many people rely on is a **factory**: `agent_card_save` with `kind: factory`, its prompt versions in `prompts/` (one production) and test cases in `evals/`.
 - `brain_lint` (weekly, automatically) reports unsigned notes, missing record fields, broken links and stale records; fix what it finds when you're in that area.

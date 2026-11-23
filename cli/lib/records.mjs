@@ -34,19 +34,37 @@ export const LIVE_STATUSES = ["active", "open", "in-progress", "in progress", "d
 const ORDER = ["type", "id", "title", "status", "owner", "team", "role", "date", "review_by", "links", "agent", "created_by", "updated"];
 
 // ---------------------------------------------------------------------------
-// Frontmatter: scalars and [a, b] lists.
+// Frontmatter: scalars, [a, b] lists and block lists (key:\n  - a). Record
+// links are written as a block list of quoted [[wikilinks]], the shape Obsidian
+// reads as link properties, so its graph and backlinks see them too.
 
 export function parseFrontmatter(text) {
   const m = /^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/.exec(text);
   if (!m) return { meta: {}, body: text, has: false };
   const meta = {};
+  const unquote = (s) => s.trim().replace(/^["']|["']$/g, "");
+  let list = null; // key of a block list being read (key:\n  - a\n  - b)
   for (const raw of m[1].split(/\r?\n/)) {
+    const item = /^\s*-\s+(.*)$/.exec(raw);
+    if (list && item) {
+      const v = unquote(item[1]);
+      if (!Array.isArray(meta[list])) meta[list] = [];
+      if (v) meta[list].push(v);
+      continue;
+    }
+    list = null;
     const kv = /^([A-Za-z_][\w-]*)\s*:\s*(.*)$/.exec(raw.trim());
     if (!kv) continue;
+    const key = kv[1].toLowerCase();
     let v = kv[2].trim();
-    if (v.startsWith("[") && v.endsWith("]")) v = v.slice(1, -1).split(",").map((s) => s.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
-    else if ((v.startsWith('"') && v.endsWith('"')) || (v.startsWith("'") && v.endsWith("'"))) v = v.slice(1, -1);
-    meta[kv[1].toLowerCase()] = v;
+    if (v === "") {
+      meta[key] = ""; // stays empty unless "- item" lines follow
+      list = key;
+      continue;
+    }
+    if (v.startsWith("[") && v.endsWith("]") && !/^\[\[[^\]]*\]\]$/.test(v)) v = v.slice(1, -1).split(",").map(unquote).filter(Boolean);
+    else v = unquote(v);
+    meta[key] = v;
   }
   return { meta, body: m[2], has: true };
 }
@@ -54,18 +72,32 @@ export function parseFrontmatter(text) {
 function renderFrontmatter(meta) {
   const keys = [...ORDER.filter((k) => k in meta), ...Object.keys(meta).filter((k) => !ORDER.includes(k)).sort()];
   const val = (v) => (Array.isArray(v) ? `[${v.join(", ")}]` : /[:#\[\]]|^\s|\s$/.test(String(v)) ? JSON.stringify(String(v)) : String(v));
-  return `---\n${keys.filter((k) => meta[k] !== "" && meta[k] != null && !(Array.isArray(meta[k]) && !meta[k].length)).map((k) => `${k}: ${val(meta[k])}`).join("\n")}\n---\n`;
+  const line = (k) => (k === "links" ? `links:\n${meta.links.map((l) => `  - ${JSON.stringify(`[[${l}]]`)}`).join("\n")}` : `${k}: ${val(meta[k])}`);
+  return `---\n${keys.filter((k) => meta[k] !== "" && meta[k] != null && !(Array.isArray(meta[k]) && !meta[k].length)).map(line).join("\n")}\n---\n`;
 }
 
-const LINK = /\[\[([a-z0-9-]+:)?([a-z]+)\/([a-z0-9][a-z0-9._-]*)\]\]/g;
+// [[type/id]] with an optional brain: prefix, and Obsidian's #heading and |alias.
+// Either the type (person) or its folder (people) works; Brainium writes the
+// folder form, which Obsidian resolves as a path.
+const LINK = /\[\[([a-z0-9-]+:)?([a-z]+)\/([a-z0-9][a-z0-9._-]*?)(?:\.md)?(?:#[^\]|\n]*)?(?:\|[^\]\n]*)?\]\]/g;
 
-/** "project/x", "[[project/x]]" or "brain:project/x" -> { brain, type, id } (type may be a folder name). */
+/** "people/x", "[[person/x|X]]" or "brain:project/x" -> { brain, type, id } (type may be a folder name). */
 export function parseRef(ref) {
-  const m = /^\[?\[?(?:([a-z0-9-]+):)?([a-z]+)\/([a-z0-9][a-z0-9._-]*?)(?:\.md)?\]?\]?$/.exec(String(ref || "").trim());
-  if (!m) throw new Error(`a record is named type/id, e.g. project/onboarding (got "${ref}")`);
+  const m = /^\[?\[?(?:([a-z0-9-]+):)?([a-z]+)\/([a-z0-9][a-z0-9._-]*?)(?:\.md)?(?:#[^\]|]*)?(?:\|[^\]]*)?\]?\]?$/.exec(String(ref || "").trim());
+  if (!m) throw new Error(`a record is named folder/id, e.g. projects/onboarding (got "${ref}")`);
   const type = RECORD_TYPES[m[2]] ? m[2] : FOLDER_TYPE[m[2]];
-  if (!type) throw new Error(`unknown record type "${m[2]}" (types: ${Object.keys(RECORD_TYPES).join(", ")})`);
+  if (!type) throw new Error(`unknown record type "${m[2]}" (use a folder: ${Object.values(RECORD_TYPES).map((d) => d.folder).join(", ")})`);
   return { brain: m[1] || null, type, id: m[3] };
+}
+
+/** The form Brainium writes: "people/sam" or "brain:people/sam" (unparseable refs come back trimmed, as given). */
+export function folderRef(ref) {
+  try {
+    const r = parseRef(ref);
+    return `${r.brain ? `${r.brain}:` : ""}${RECORD_TYPES[r.type].folder}/${r.id}`;
+  } catch {
+    return String(ref || "").trim().replace(/^\[\[|\]\]$/g, "");
+  }
 }
 
 function recordPath(root, type, id) {
@@ -78,7 +110,7 @@ function prose(body) {
 }
 
 function linksOf(meta, body) {
-  const out = new Set((Array.isArray(meta.links) ? meta.links : meta.links ? [meta.links] : []).map((l) => l.replace(/^\[\[|\]\]$/g, "")));
+  const out = new Set((Array.isArray(meta.links) ? meta.links : meta.links ? [meta.links] : []).map((l) => String(l).replace(/^\[\[|\]\]$/g, "").replace(/(#[^|]*)?(\|.*)?$/, "")));
   for (const m of prose(body).matchAll(LINK)) out.add(`${m[1] || ""}${m[2]}/${m[3]}`);
   return [...out];
 }
@@ -107,7 +139,7 @@ export function saveRecord(roots, config, { type, id = "", title = "", fields = 
     type,
     id: slug,
     title: redact(String(title || old.meta.title || slug)),
-    links: [...new Set([...(Array.isArray(old.meta.links) ? old.meta.links : []), ...links.map((l) => String(l).replace(/^\[\[|\]\]$/g, ""))])],
+    links: [...new Set([...(Array.isArray(old.meta.links) ? old.meta.links : old.meta.links ? [old.meta.links] : []), ...links].map(folderRef).filter(Boolean))],
     updated: localDate(now),
     ...(who ? { agent: who } : {}),
     created_by: old.meta.created_by || who || "",
@@ -115,7 +147,7 @@ export function saveRecord(roots, config, { type, id = "", title = "", fields = 
   const text = body !== undefined && body !== null ? redact(String(body).trim()) : String(old.body || "").trim() || `# ${meta.title}\n`;
   writeFileAtomic(path, renderFrontmatter(meta) + "\n" + text.replace(/\n*$/, "\n"));
   const missing = RECORD_TYPES[type].required.filter((f) => !meta[f]);
-  const commit = config.commit === false ? "skipped" : commitPaths(root, [path], `brainium: ${old.meta.type ? "update" : "add"} ${type}/${slug}`);
+  const commit = config.commit === false ? "skipped" : commitPaths(root, [path], `brainium: ${old.meta.type ? "update" : "add"} ${RECORD_TYPES[type].folder}/${slug}`);
   return { path: `${name}:${relative(root, path).split(sep).join("/")}`, created: !old.meta.type, missing, commit };
 }
 
@@ -165,9 +197,9 @@ export function getRecord(roots, ref, { brain = "auto", defaultBrain = "personal
     if (file === path) continue;
     const t = readFileSync(file, "utf8");
     const fm = parseFrontmatter(t);
-    if (linksOf(fm.meta, fm.body).some((l) => me.includes(l.replace(/^[a-z0-9-]+:/, "")))) backlinks.push(`${name}:${relative(root, file).split(sep).join("/")}`);
+    if (linksOf(fm.meta, fm.body).some((l) => me.includes(folderRef(l.replace(/^[a-z0-9-]+:/, ""))) || me.includes(l.replace(/^[a-z0-9-]+:/, "")))) backlinks.push(`${name}:${relative(root, file).split(sep).join("/")}`);
   }
-  return { ref: `${name}:${r.type}/${r.id}`, path: `${name}:${relative(root, path).split(sep).join("/")}`, meta, body: body.trim(), links, backlinks };
+  return { ref: `${name}:${RECORD_TYPES[r.type].folder}/${r.id}`, path: `${name}:${relative(root, path).split(sep).join("/")}`, meta, body: body.trim(), links, backlinks };
 }
 
 // ---------------------------------------------------------------------------

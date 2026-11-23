@@ -14,4 +14,4 @@ agent: <your agent name>
 
 ## People
 
-- [[person/<id>]]
+- [[people/<id>]]
