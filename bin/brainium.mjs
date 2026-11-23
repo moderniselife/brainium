@@ -47,6 +47,9 @@ Routines (scheduled prompts, upkeep jobs and shell commands in a brain's routine
   brainium scheduler install|uninstall|status
   brainium preflight [--agent NAME] [--no-pull]  Before any work: fast-forward the repos .brainium.json lists
                                         and list rule files changed since this agent last looked
+  brainium organize [--brain NAME] [--apply] [--agent NAME]
+                                        Fix what lint finds that has one right answer (misfiled records,
+                                        unsigned notes with evidence, old or broken links); dry run by default
   brainium lint [--brain NAME] [--write] [--stale-days N]
                                         Check for context rot; --write saves shared/health.md
   brainium record get FOLDER/ID [--brain NAME]
@@ -295,6 +298,16 @@ async function main() {
       const { preflight } = await import("../cli/lib/preflight.mjs");
       const r = preflight(config, { cwd: process.cwd(), agent: typeof args.agent === "string" ? args.agent : process.env.BRAINIUM_AGENT || "", pull: args.pull !== false && !args["no-pull"] });
       print(args, r, (v) => (v.configured ? v.text : "No preflight set up here: add \"update\" and/or \"rules\" to .brainium.json."));
+      return;
+    }
+
+    case "organize": {
+      const { organizeBrain, organizeReport } = await import("../cli/lib/organize.mjs");
+      const { brainRoots, pickBrain, defaultBrainName } = await import("../cli/lib/brain.mjs");
+      const roots = brainRoots(config, process.cwd());
+      const name = pickBrain(roots, typeof args.brain === "string" ? args.brain : "auto", defaultBrainName(config));
+      const r = organizeBrain(roots, name, { apply: !!args.apply, agent: typeof args.agent === "string" ? args.agent : "" });
+      print(args, r, organizeReport);
       return;
     }
 

@@ -26,7 +26,7 @@ function team() {
 test("a new brain comes with record folders, factory templates and a weekly health check", () => {
   const { mojo, restore } = team();
   try {
-    for (const f of ["shared/projects/_template.md", "shared/people/README.md", "shared/meetings/_template.md", "shared/customers/_template.md", "shared/documents/_template.md", "shared/teams/README.md", "agents/_template/prompts/_template.md", "agents/_template/evals/_template.md", "routines/brain-health.md"]) {
+    for (const f of ["shared/projects/_template.md", "shared/people/README.md", "shared/meetings/_template.md", "shared/customers/_template.md", "shared/documents/_template.md", "shared/teams/README.md", "agents/_template/prompts/_template.md", "agents/_template/evals/_template.md", "routines/brain-health.md", "routines/organize.md", "routines/librarian.md"]) {
       assert.ok(existsSync(join(mojo, f)), f);
     }
   } finally { restore(); }

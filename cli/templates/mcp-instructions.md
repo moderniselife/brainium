@@ -3,5 +3,5 @@ Brainium is the user's second brain: git-backed memory that survives switching a
 - Before any work at all: call brain_preflight (pass agent) and reread every rule file it lists; it pulls the latest rules and brain. Then call brain_pending; if captured sessions are waiting, read them (brain_pending_get) and file each as a concise session entry (brain_resolve). Search (brain_search) when prior context may matter.
 - Projects, people, teams, customers, meetings and documents are records: record_get folder/id (e.g. projects/launch) (it follows links one hop) before searching; record_save to create or update one rather than writing a new note about it.
 - Before saying done on substantive work: brain_log a session; incidents as failure (+learning); preferences as memory; new/changed agent instructions via agent_card_save.
-- Sign everything: pass agent: "<your name>" so every note names who wrote it. brain_lint shows what has rotted (unsigned, stale, broken links).
+- Sign everything: pass agent: "<your name>" so every note names who wrote it. brain_lint shows what has rotted (unsigned, stale, broken links); brain_organize fixes what has one right answer.
 - Do this without being asked. Never store secrets.

@@ -79,7 +79,7 @@ function renderFrontmatter(meta) {
 // [[type/id]] with an optional brain: prefix, and Obsidian's #heading and |alias.
 // Either the type (person) or its folder (people) works; Brainium writes the
 // folder form, which Obsidian resolves as a path.
-const LINK = /\[\[([a-z0-9-]+:)?([a-z]+)\/([a-z0-9][a-z0-9._-]*?)(?:\.md)?(?:#[^\]|\n]*)?(?:\|[^\]\n]*)?\]\]/g;
+export const LINK = /\[\[([a-z0-9-]+:)?([a-z]+)\/([a-z0-9][a-z0-9._-]*?)(?:\.md)?(?:#[^\]|\n]*)?(?:\|[^\]\n]*)?\]\]/g;
 
 /** "people/x", "[[person/x|X]]" or "brain:project/x" -> { brain, type, id } (type may be a folder name). */
 export function parseRef(ref) {
@@ -105,7 +105,7 @@ function recordPath(root, type, id) {
 }
 
 /** Body text without fenced code blocks and `inline code`, where [[links]] are examples, not links. */
-function prose(body) {
+export function prose(body) {
   return String(body).replace(/^(```|~~~)[\s\S]*?^\1/gm, "").replace(/`[^`\n]*`/g, "");
 }
 
@@ -205,7 +205,7 @@ export function getRecord(roots, ref, { brain = "auto", defaultBrain = "personal
 // ---------------------------------------------------------------------------
 // Lint
 
-function markdownFiles(root, out = []) {
+export function markdownFiles(root, out = []) {
   for (const e of readdirSync(root, { withFileTypes: true })) {
     if (e.name.startsWith(".") || e.name === "node_modules") continue;
     const p = join(root, e.name);
@@ -215,7 +215,7 @@ function markdownFiles(root, out = []) {
   return out;
 }
 
-const SIGNATURE = /^(agent|persona|from|author|created_by)\s*:|_agent: [^_]+_|_\([^)]*agent: [^)]+\)_|^\s*\**agent\**\s*:/im;
+export const SIGNATURE = /^(agent|persona|from|author|created_by)\s*:|_agent: [^_]+_|_\([^)]*agent: [^)]+\)_|^\s*\**agent\**\s*:/im;
 
 /**
  * Check a brain. Returns { brain, checked, issues: [{ kind, path, detail }] }.

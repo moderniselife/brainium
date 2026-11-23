@@ -25,7 +25,7 @@ import { commitPaths, findRepoRoot, remoteUrl } from "./git.mjs";
 
 export const TYPES = ["prompt", "upkeep", "shell"];
 export const APPS = ["claude-code", "codex"];
-export const JOBS = ["sync", "distill", "digest", "lint"];
+export const JOBS = ["sync", "distill", "digest", "lint", "organize"];
 export const STAGES = ["shadow", "limited", "full"];
 // When a run is written to the brain as a session entry. "failures" logs the
 // first failure and the recovery after it, not every quiet success, so an
@@ -755,6 +755,12 @@ async function execUpkeep(r, config, { env, since, now }) {
     for (const i of h.issues) counts[i.kind] = (counts[i.kind] || 0) + 1;
     const summary = Object.entries(counts).map(([k, n]) => `${k}: ${n}`).join(", ");
     return { exit: 0, output: `${h.records} records, ${h.checked} shared files checked. ${h.issues.length ? summary : "No issues."}\nReport: ${h.path}`, timedOut: false };
+  }
+  if (r.job === "organize") {
+    const { organizeBrain, organizeReport } = await import("./organize.mjs");
+    const { brainRoots } = await import("./brain.mjs");
+    const o = organizeBrain(brainRoots(config, null), r.brain, { apply: true, agent: r.agent || "librarian", now });
+    return { exit: String(o.commit).startsWith("failed") ? 1 : 0, output: organizeReport(o), timedOut: false };
   }
   if (r.job === "distill") {
     const { distill } = await import("./capture.mjs");

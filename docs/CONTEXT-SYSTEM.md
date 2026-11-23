@@ -78,6 +78,31 @@ Every entry the Brainium tools write names its agent (`_agent: name_` on notes, 
 
 The report goes to `shared/health.md`. Team brains are checked by their own health routine.
 
+## Organize and the librarian: the brain sorts itself
+
+Lint only reports rot. Two routines that come with every brain fix it, so nobody sorts notes by hand:
+
+**Organize** (`routines/organize.md`, daily 06:30, upkeep, on by default) makes the fixes that have exactly one right answer, then commits them:
+
+| Fix | How it knows |
+|---|---|
+| A misfiled record moves to its type's folder | its own `type:` field (it won't overwrite a record already there) |
+| An unsigned shared note gets `agent:` (or `author:` for a person) | the agent folder it sits in, an `<!-- imported from … — added by NAME -->` note, an `Agent:`/`<tool>-Agent:` commit trailer, or the commit that added it (bulk commits of 40+ files and sync bots don't count) |
+| `[[person/sam]]` becomes `[[people/sam]]`, in the body and in `links:` | the record folders |
+| A link to a record that doesn't exist points at the one record with that id | only when there is exactly one |
+
+Anything ambiguous is listed as left over, not touched. Code spans, tags and other frontmatter fields are never rewritten. Run it yourself with `brainium organize [--brain NAME]` (dry run) and `--apply`, or the `brain_organize` tool. If other changes are already staged in the repo, it reports them and makes no commit.
+
+**Librarian** (`routines/librarian.md`, daily 07:00, a prompt routine as agent `librarian`) handles what needs judgement:
+
+- links each new note to the records it's about, creating a record once two notes need it
+- moves notes to where they belong (an agent's private note the team needs goes to the team's `shared/`; a note in the wrong team goes to the right one), leaving a pointer behind
+- merges duplicates
+- signs notes whose author is clear from their content
+- messages the owners of stale records
+
+It never deletes content. It comes off and in **shadow** stage: approve and enable it on one machine (`brainium routines approve <brain>/librarian`, then `enable`). It then only proposes changes until you move it to `stage: limited` (at most `limit` changes a run) and then `full`.
+
 ## Routines: triggers and stages
 
 ```markdown
